@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#4f7cff">
+<title>平板单机版打卡系统</title>
+<style>
+:root{
+  --primary:#4f7cff;--primary-dark:#315fd8;--success:#22a06b;--warning:#e6a23c;
+  --danger:#e5484d;--text:#1f2937;--muted:#6b7280;--bg:#f4f7fb;--card:#fff;
+  --border:#e5e7eb;--shadow:0 8px 24px rgba(31,41,55,.08);--radius:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:var(--text);background:var(--bg)}
+body{font-size:16px}
+button,input,textarea,select{font:inherit}
+button{min-height:48px;border:0;border-radius:12px;padding:0 18px;cursor:pointer;touch-action:manipulation}
+input,textarea,select{width:100%;min-height:48px;border:1px solid #d7dce5;border-radius:10px;padding:10px 12px;background:#fff;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,124,255,.12)}
+textarea{min-height:220px;resize:vertical}
+.hidden{display:none!important}
+.app{min-height:100vh}
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#edf3ff,#f7f9fc)}
+.login-card{width:min(520px,100%);background:#fff;border-radius:24px;padding:32px;box-shadow:var(--shadow)}
+.logo{width:72px;height:72px;border-radius:20px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 18px}
+h1,h2,h3{margin:0 0 12px} h1{font-size:28px} h2{font-size:22px} h3{font-size:18px}
+.muted{color:var(--muted)} .small{font-size:13px}.center{text-align:center}
+.form-group{margin:16px 0}.form-group label{display:block;font-weight:600;margin-bottom:8px}
+.primary{background:var(--primary);color:#fff}.primary:active{background:var(--primary-dark)}
+.secondary{background:#eef2f7;color:#374151}.success{background:var(--success);color:#fff}.danger{background:var(--danger);color:#fff}
+.warning{background:#fff3dc;color:#8a5b00}.ghost{background:transparent;color:var(--primary);border:1px solid #cbd7ff}
+button:disabled{opacity:.5;cursor:not-allowed}
+.login-hint{margin-top:16px;padding:12px;border-radius:10px;background:#f5f7fb;color:#5b6472;font-size:13px}
+.header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--border);padding:12px max(16px,env(safe-area-inset-left)) 12px max(16px,env(safe-area-inset-right));display:flex;align-items:center;justify-content:space-between;gap:12px}
+.header-left{display:flex;align-items:center;gap:12px;min-width:0}.header-title{font-weight:700;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.header-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.container{width:min(1200px,100%);margin:0 auto;padding:20px}
+.nav{display:flex;gap:8px;overflow:auto;padding-bottom:8px;margin-bottom:14px}
+.nav button{white-space:nowrap;background:#fff;border:1px solid var(--border);color:#4b5563}
+.nav button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.grid{display:grid;gap:16px}.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.stat{display:flex;align-items:center;justify-content:space-between;gap:12px}.stat-number{font-size:30px;font-weight:800}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.toolbar-left,.toolbar-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.table-wrap{overflow:auto;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;min-width:760px}
+th,td{padding:14px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+th{background:#f8fafc;font-weight:700;position:sticky;top:0}
+.badge{display:inline-flex;align-items:center;min-height:30px;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:700}
+.badge-success{background:#e5f7ef;color:#087443}.badge-warning{background:#fff3dc;color:#8a5b00}
+.badge-danger{background:#fde8e8;color:#b4232a}.badge-gray{background:#eef1f5;color:#667085}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.task-card{border:1px solid var(--border);border-radius:14px;padding:18px;background:#fff}
+.task-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.task-name{font-size:19px;font-weight:700}.task-desc{color:var(--muted);margin-top:6px;line-height:1.6}
+.task-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;flex-wrap:wrap}
+.checkin-btn{min-width:150px;font-weight:700}
+.locked{background:#eef1f5;color:#8a919e}
+.done{background:#e5f7ef;color:#087443}
+.notice{padding:14px 16px;border-radius:12px;background:#eef4ff;color:#31539e;margin-bottom:16px;line-height:1.6}
+.warning-box{padding:14px 16px;border-radius:12px;background:#fff7e8;color:#8a5b00;margin-bottom:16px;line-height:1.6}
+.danger-box{padding:14px 16px;border-radius:12px;background:#fff0f0;color:#a7272e;margin-bottom:16px;line-height:1.6}
+.modal-mask{position:fixed;inset:0;background:rgba(15,23,42,.52);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{width:min(680px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+.modal-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.modal-body{padding:20px}.modal-foot{padding:16px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.icon-btn{width:48px;padding:0;background:#eef2f7;color:#374151}
+.form-error{color:var(--danger);font-size:13px;margin-top:6px;min-height:18px}
+.checkbox-row{display:flex;align-items:center;gap:10px;min-height:48px}.checkbox-row input{width:22px;height:22px;min-height:22px}
+.achievement-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:16px}
+.achievement-card{background:#fff;border-radius:18px;padding:14px;box-shadow:var(--shadow);text-align:center;min-width:0}
+.achievement-img-wrap{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:14px;background:linear-gradient(135deg,#e0f2fe,#bae6fd,#7dd3fc,#38bdf8);overflow:hidden}
+.achievement-img{width:128px;height:128px;max-width:100%;object-fit:contain;filter:grayscale(1);opacity:.55;transition:filter .6s ease,opacity .6s ease,transform .6s ease}
+.achievement-card.unlocked .achievement-img{filter:none;opacity:1}
+.achievement-card.newly .achievement-img{animation:unlock .6s ease}
+@keyframes unlock{0%{filter:grayscale(1);opacity:.35;transform:scale(.9)}60%{filter:none;opacity:1;transform:scale(1.08)}100%{transform:scale(1)}}
+.achievement-name{font-weight:700;margin-top:10px}.achievement-date{font-size:13px;color:var(--muted);margin-top:5px}
+.pager{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:18px}
+.progress{height:10px;background:#e9edf3;border-radius:999px;overflow:hidden}.progress>span{display:block;height:100%;background:var(--primary);border-radius:999px}
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi .card{padding:16px}
+.search-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;margin-bottom:16px}
+.footer-note{text-align:center;color:#8992a1;font-size:12px;padding:24px 0}
+pre.json-preview{white-space:pre-wrap;word-break:break-all;background:#111827;color:#e5e7eb;padding:14px;border-radius:12px;max-height:260px;overflow:auto;font-size:12px}
+.toast-container{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;gap:8px;width:min(90vw,520px);pointer-events:none}
+.toast{padding:13px 16px;border-radius:12px;background:#1f2937;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.2);text-align:center;animation:toastIn .2s ease}
+.toast.success{background:#137a50}.toast.error{background:#b4232a}.toast.warning{background:#8a5b00}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.login-input-wrap{position:relative}.password-toggle{position:absolute;right:6px;top:4px;height:40px;min-height:40px;padding:0 12px;background:transparent;color:#6b7280}
+@media(max-width:800px){
+  .container{padding:14px}.grid-2,.grid-3{grid-template-columns:1fr}
+  .kpi{grid-template-columns:repeat(2,1fr)}.search-row{grid-template-columns:1fr 1fr}
+  .achievement-grid{gap:10px}.achievement-card{padding:9px}.achievement-name{font-size:14px}
+}
+@media(max-width:520px){
+  .login-card{padding:22px}.header{align-items:flex-start}.header-actions button{padding:0 12px}
+  .search-row{grid-template-columns:1fr}.achievement-grid{gap:8px}
+  .achievement-card{border-radius:12px}.achievement-img{width:100px;height:100px}
+  .modal{border-radius:16px}.modal-mask{padding:8px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toastContainer" class="toast-container"></div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   平板单机版打卡系统
+   单文件 HTML / CSS / JavaScript
+   数据仅保存于浏览器 LocalStorage。
+   ========================================================= */
+
+const STORAGE_KEY = "tablet_checkin_system_v1";
+const SESSION_KEY = "tablet_checkin_session_v1";
+const APP_VERSION = 1;
+const OPEN_HOUR = 5;
+
+const ACHIEVEMENTS = [
+  ["rat","鼠","https://i-blog.csdnimg.cn/direct/39ec524bc1e04db5bf24dd83038186cd.png"],
+  ["ox","牛","https://i-blog.csdnimg.cn/direct/acd4be3e8a6940a3a2bb9e9f8301293b.png"],
+  ["tiger","虎","https://i-blog.csdnimg.cn/direct/994fed9a4ec44a068358b15e0737a64b.png"],
+  ["rabbit","兔","https://i-blog.csdnimg.cn/direct/27550114e961439fab056ad84e45da3b.png"],
+  ["dragon","龙","https://i-blog.csdnimg.cn/direct/2a8db420095142b1912f003053e6d842.png"],
+  ["snake","蛇","https://i-blog.csdnimg.cn/direct/c41065e473da4ef19c8a280f7c05c460.png"],
+  ["horse","马","https://i-blog.csdnimg.cn/direct/ce16bfe16dda4e6b98a620d1740d4eec.png"],
+  ["goat","羊","https://i-blog.csdnimg.cn/direct/13a3798c0f4d4b448e8267d26bf732d9.png"],
+  ["monkey","猴","https://i-blog.csdnimg.cn/direct/2953617085a7487f8753676bfd1c0a6e.png"],
+  ["rooster","鸡","https://i-blog.csdnimg.cn/direct/cf43177fa99a48e289a21dfcdd00c01f.png"],
+  ["dog","狗","https://i-blog.csdnimg.cn/direct/b4f5f8206f294e8a847756084ffcda73.png"],
+  ["pig","猪","https://i-blog.csdnimg.cn/direct/db20ce3a037747718fc54d99422a7989.png"],
+  ["great_wall","长城","https://i-blog.csdnimg.cn/direct/22bf64c3331f4e8c83dbf0a4224fd7a9.png"],
+  ["forbidden_city","故宫","https://i-blog.csdnimg.cn/direct/29ad7f58ab0942ca930667932b4738ab.png"],
+  ["temple_of_heaven","天坛","https://i-blog.csdnimg.cn/direct/9ad8c56c412d4d6a9216ff53d68780cb.png"],
+  ["terracotta","兵马俑","https://i-blog.csdnimg.cn/direct/f84f6ec7583c41109539fa25d9f7f74e.png"],
+  ["potala","布达拉宫","https://i-blog.csdnimg.cn/direct/9a53d8f084144007a0ca301463843efb.png"],
+  ["eiffel","埃菲尔铁塔","https://i-blog.csdnimg.cn/direct/2a35c408835141c09836e6c523981ee2.png"],
+  ["liberty","自由女神像","https://i-blog.csdnimg.cn/direct/c720761983d24c7e88bab617784ee4f5.png"],
+  ["pyramid","金字塔","https://i-blog.csdnimg.cn/direct/a69c2264e56b4643a98d9084d60d1b0b.png"],
+  ["taj_mahal","泰姬陵","https://i-blog.csdnimg.cn/direct/ad45101a54094efbb3dab961bb3da7c4.png"],
+  ["opera_house","悉尼歌剧院","https://i-blog.csdnimg.cn/direct/8a2864953f6c4801a7cafa4a3d5f7ab9.png"],
+  ["fuji","富士山","fuji.png"],["big_ben","大本钟","big_ben.png"]
+].map(([id,name,image])=>({id,name,image}));
+
+const state = {
+  data: null,
+  session: null,
+  page: "home",
+  achievementPage: 0,
+  modal: null,
+  interval: null,
+  lastDate: ""
+};
+
+function uid(prefix="id"){
+  return prefix + "_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,8);
+}
+function pad(n){return String(n).padStart(2,"0")}
+function dateKey(d=new Date()){
+  return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+}
+function timeKey(d=new Date()){
+  return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
+}
+function formatDateTime(value){
+  if(!value)return "-";
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime()))return value;
+  return dateKey(d)+" "+timeKey(d);
+}
+function escapeHtml(s){
+  return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+function deepClone(obj){return JSON.parse(JSON.stringify(obj))}
+function defaultData(){
+  return {
+    version: APP_VERSION,
+    settings: {
+      appName:"平板单机版打卡系统"
+    },
+    accounts: {
+      admin: {
+        username:"admin", name:"管理员", role:"admin", password:"123456",
+        mustChangePassword:false, createdAt:new Date().toISOString()
+      },
+      student001: {
+        username:"student001", name:"测试学生", role:"student", password:"123456",
+        mustChangePassword:false, createdAt:new Date().toISOString()
+      }
+    },
+    taskTemplates: [
+      {
+        id:uid("task"), name:"晨读", description:"完成当天晨读任务",
+        deadline:"08:30", enabled:true, createdAt:new Date().toISOString()
+      },
+      {
+        id:uid("task"), name:"作业打卡", description:"完成当天作业并提交打卡",
+        deadline:"20:00", enabled:true, createdAt:new Date().toISOString()
+      }
+    ],
+    dailyTasks:{},
+    attendance:{},
+    achievements:{}
+  };
+}
+
+function loadData(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw){
+      const d=defaultData();
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(d));
+      return d;
+    }
+    const d=JSON.parse(raw);
+    return normalizeData(d);
+  }catch(e){
+    console.error(e);
+    const d=defaultData();
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(d))}catch(_){}
+    return d;
+  }
+}
+function normalizeData(d){
+  if(!d || typeof d!=="object") return defaultData();
+  const base=defaultData();
+  d.version=Number(d.version)||APP_VERSION;
+  d.settings={...base.settings,...(d.settings||{})};
+  d.accounts=(d.accounts&&typeof d.accounts==="object")?d.accounts:base.accounts;
+  d.taskTemplates=Array.isArray(d.taskTemplates)?d.taskTemplates:[];
+  d.dailyTasks=(d.dailyTasks&&typeof d.dailyTasks==="object")?d.dailyTasks:{};
+  d.attendance=(d.attendance&&typeof d.attendance==="object")?d.attendance:{};
+  d.achievements=(d.achievements&&typeof d.achievements==="object")?d.achievements:{};
+  return d;
+}
+function saveData(){
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(state.data));
+    return true;
+  }catch(e){
+    console.error(e);
+    toast("本地数据保存失败，可能是浏览器存储空间不足","error");
+    return false;
+  }
+}
+function getCurrentUser(){
+  return state.session ? state.data.accounts[state.session.username] : null;
+}
+function isAdmin(){return getCurrentUser()?.role==="admin"}
+function isStudent(){return getCurrentUser()?.role==="student"}
+
+function setSession(username){
+  state.session={username};
+  localStorage.setItem(SESSION_KEY,JSON.stringify(state.session));
+}
+function clearSession(){
+  state.session=null;
+  localStorage.removeItem(SESSION_KEY);
+}
+function loadSession(){
+  try{
+    const s=JSON.parse(localStorage.getItem(SESSION_KEY)||"null");
+    if(s && s.username && state.data.accounts[s.username]) state.session=s;
+  }catch(e){clearSession()}
+}
+
+function toast(msg,type=""){
+  const box=document.getElementById("toastContainer");
+  const el=document.createElement("div");
+  el.className="toast "+type;
+  el.textContent=msg;
+  box.appendChild(el);
+  setTimeout(()=>el.remove(),2800);
+}
+let _audioCtx=null;
+function playDing(){
+  try{
+    if(!_audioCtx){
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC)return;
+      _audioCtx=new AC();
+    }
+    if(_audioCtx.state==="suspended")_audioCtx.resume();
+    const t=_audioCtx.currentTime;
+    const osc=_audioCtx.createOscillator();
+    const gain=_audioCtx.createGain();
+    osc.type="sine";
+    osc.frequency.setValueAtTime(880,t);
+    osc.frequency.exponentialRampToValueAtTime(1760,t+0.12);
+    gain.gain.setValueAtTime(0,t);
+    gain.gain.linearRampToValueAtTime(0.35,t+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001,t+0.5);
+    osc.connect(gain).connect(_audioCtx.destination);
+    osc.start(t);
+    osc.stop(t+0.55);
+  }catch(e){}
+}
+
+function showModal(title,body,footer="",opts={}){
+  state.modal={title,body,footer,opts};
+  render();
+}
+function closeModal(){
+  state.modal=null;
+  render();
+}
+function confirmModal(title,message,onConfirm){
+  showModal(title,`<div class="danger-box">${escapeHtml(message)}</div>`,
+    `<button class="secondary" onclick="closeModal()">取消</button><button class="danger" id="confirmActionBtn">确定</button>`);
+  setTimeout(()=>{
+    const b=document.getElementById("confirmActionBtn");
+    if(b)b.onclick=()=>{closeModal();onConfirm()};
+  },0);
+}
+
+function validateUsername(username){
+  return /^[A-Za-z0-9_-]{3,32}$/.test(username);
+}
+function validatePassword(password){
+  return typeof password==="string" && password.length>=6 && password.length<=64;
+}
+function timeToMinutes(t){
+  if(!/^\d{2}:\d{2}$/.test(t))return -1;
+  const [h,m]=t.split(":").map(Number);
+  if(h>23||m>59)return -1;
+  return h*60+m;
+}
+function currentMinutes(){const d=new Date();return d.getHours()*60+d.getMinutes()}
+function todayAfterOpen(){return new Date().getHours()>=OPEN_HOUR}
+
+function ensureDailyTasks(forceDate=null){
+  const now=new Date();
+  const today=forceDate||dateKey(now);
+  if(now.getHours()<OPEN_HOUR && !forceDate) return false;
+  const enabled=state.data.taskTemplates.filter(t=>t.enabled);
+  if(!state.data.dailyTasks[today]){
+    state.data.dailyTasks[today]=enabled.map(t=>({
+      instanceId:uid("daily"),
+      templateId:t.id,
+      name:t.name,
+      description:t.description,
+      deadline:t.deadline,
+      generatedAt:now.toISOString()
+    }));
+    saveData();
+    return true;
+  }
+  const existing=new Set(state.data.dailyTasks[today].map(t=>t.templateId));
+  let changed=false;
+  for(const t of enabled){
+    const daily=state.data.dailyTasks[today].find(x=>x.templateId===t.id);
+    if(!daily){
+      state.data.dailyTasks[today].push({
+        instanceId:uid("daily"),
+        templateId:t.id,
+        name:t.name,
+        description:t.description,
+        deadline:t.deadline,
+        generatedAt:now.toISOString()
+      });
+      changed=true;
+    }else{
+      if(daily.name!==t.name){daily.name=t.name;changed=true}
+      if(daily.description!==t.description){daily.description=t.description;changed=true}
+      if(daily.deadline!==t.deadline){daily.deadline=t.deadline;changed=true}
+    }
+  }
+  if(changed)saveData();
+  return changed;
+}
+function unlockAchievements(){
+  if(!requireAdmin())return;
+  const before={};
+  for(const account of Object.values(state.data.accounts)){
+    if(account.role!=="student")continue;
+    before[account.username]=(state.data.achievements[account.username]||[]).length;
+  }
+  syncAchievements();
+  let total=0;
+  for(const username of Object.keys(before)){
+    const after=(state.data.achievements[username]||[]).length;
+    total+=(after-before[username]);
+  }
+  if(total>0){
+    toast(`成就解锁成功，共发放 ${total} 个成就`,"success");
+  }else{
+    toast("暂无可解锁的成就","warning");
+  }
+  render();
+}
+function ensureDailyTaskData(){
+  if(todayAfterOpen()) ensureDailyTasks();
+}
+function getTodayTasks(){return state.data.dailyTasks[dateKey()]||[]}
+function getAttendance(username,date){
+  return state.data.attendance?.[username]?.[date]||{};
+}
+function setAttendance(username,date,instanceId,value){
+  if(!state.data.attendance[username])state.data.attendance[username]={};
+  if(!state.data.attendance[username][date])state.data.attendance[username][date]={};
+  state.data.attendance[username][date][instanceId]=value;
+}
+function isTaskCompleted(username,date,instanceId){
+  return !!getAttendance(username,date)[instanceId]?.completed;
+}
+function deadlinePassed(task,now=new Date()){
+  const m=timeToMinutes(task.deadline);
+  if(m<0)return false;
+  return now.getHours()*60+now.getMinutes()>m ||
+    (now.getHours()*60+now.getMinutes()===m && now.getSeconds()>0);
+}
+function taskCanCheckin(task){
+  if(!todayAfterOpen())return {ok:false,reason:"not-open"};
+  if(deadlinePassed(task))return {ok:false,reason:"expired"};
+  return {ok:true};
+}
+function allTasksCompleted(username,date){
+  const tasks=state.data.dailyTasks[date]||[];
+  if(tasks.length===0)return false;
+  return tasks.every(t=>{
+    const a=getAttendance(username,date)[t.instanceId];
+    if(!a?.completed)return false;
+    const dt=new Date(a.checkinTime);
+    return !Number.isNaN(dt.getTime()) && timeToMinutes(t.deadline)>=0 &&
+      (dt.getHours()*60+dt.getMinutes())<=timeToMinutes(t.deadline);
+  });
+}
+
+function syncAchievements(){
+  let changed=false;
+  const today=dateKey();
+  for(const account of Object.values(state.data.accounts)){
+    if(account.role!=="student")continue;
+    const username=account.username;
+    if(!Array.isArray(state.data.achievements[username]))
+      state.data.achievements[username]=[];
+
+    const unlocked=state.data.achievements[username];
+    const existingDates=new Set(unlocked.map(x=>x.sourceDate));
+    const dates=Object.keys(state.data.dailyTasks).sort();
+    for(const d of dates){
+      if(d>today)continue;
+      if(existingDates.has(d))continue;
+      if(!allTasksCompleted(username,d))continue;
+      if(unlocked.length>=ACHIEVEMENTS.length){
+        existingDates.add(d);
+        continue;
+      }
+      const ach=ACHIEVEMENTS[unlocked.length];
+      unlocked.push({
+        achievementId:ach.id,
+        name:ach.name,
+        sourceDate:d,
+        unlockDate:d,
+        unlockedAt:new Date(d+"T12:00:00").toISOString()
+      });
+      existingDates.add(d);
+      changed=true;
+    }
+  }
+  if(changed)saveData();
+  return changed;
+}
+function getAchievementMap(username){
+  const list=state.data.achievements[username]||[];
+  const map={};
+  list.forEach(x=>map[x.achievementId]=x);
+  return map;
+}
+
+function validateBackupData(obj){
+  if(!obj || typeof obj!=="object")return "根数据必须是对象";
+  if(Number(obj.version)!==APP_VERSION)return "备份版本不兼容";
+  if(!obj.accounts || typeof obj.accounts!=="object")return "缺少账号数据";
+  if(!Array.isArray(obj.taskTemplates))return "任务模板数据格式错误";
+  if(!obj.dailyTasks || typeof obj.dailyTasks!=="object")return "每日任务数据格式错误";
+  if(!obj.attendance || typeof obj.attendance!=="object")return "打卡数据格式错误";
+  if(!obj.achievements || typeof obj.achievements!=="object")return "成就数据格式错误";
+  const users=Object.values(obj.accounts);
+  if(!users.some(u=>u.role==="admin"))return "备份中不存在管理员账号";
+  for(const u of users){
+    if(!u.username || !["admin","student"].includes(u.role) || typeof u.password!=="string")
+      return "账号数据格式错误";
+  }
+  return "";
+}
+function exportBackup(){
+  syncAchievements();
+  const backup={
+    backupType:"tablet-checkin-full-backup",
+    version:APP_VERSION,
+    exportedAt:new Date().toISOString(),
+    data:deepClone(state.data)
+  };
+  const json=JSON.stringify(backup,null,2);
+  copyText(json).then(ok=>{
+    if(ok){
+      toast("全量数据已复制到剪贴板","success");
+      showModal("备份成功",
+        `<div class="notice">如须保存当前数据到本地，请粘贴剪切板数据到本地记事本。</div>
+         <div class="small muted">备份内容包含账号、任务模板、每日任务、打卡记录、成就解锁数据。</div>
+         <div style="margin-top:14px"><pre class="json-preview">${escapeHtml(json.slice(0,5000))}${json.length>5000?"\\n...（完整内容已复制到剪贴板）":""}</pre></div>`,
+        `<button class="primary" onclick="closeModal()">关闭</button>`);
+    }else{
+      showModal("复制失败",
+        `<div class="danger-box">浏览器未授予剪贴板写入权限，请点击下方按钮重试，或使用系统允许的复制方式。</div>
+         <textarea id="backupFallback" readonly>${escapeHtml(json)}</textarea>`,
+        `<button class="secondary" onclick="document.getElementById('backupFallback').select()">全选</button>
+         <button class="primary" onclick="copyText(document.getElementById('backupFallback').value).then(x=>toast(x?'复制成功':'复制失败',x?'success':'error'))">复制</button>
+         <button class="primary" onclick="closeModal()">关闭</button>`);
+    }
+  });
+}
+function importBackup(){
+  showModal("导入恢复",
+    `<div class="warning-box">请打开本地备份 JSON 文件，全选复制全部文本，再粘贴到下面的输入框。解析失败不会修改当前数据。</div>
+     <textarea id="restoreText" placeholder="请粘贴完整 JSON 备份内容"></textarea>
+     <div id="restoreError" class="form-error"></div>`,
+    `<button class="secondary" onclick="closeModal()">取消</button><button class="primary" id="restoreBtn">解析并恢复</button>`);
+  setTimeout(()=>{
+    document.getElementById("restoreBtn").onclick=()=>{
+      const ta=document.getElementById("restoreText");
+      const err=document.getElementById("restoreError");
+      const text=ta.value.trim();
+      if(!text){err.textContent="请先粘贴备份内容";return}
+      let obj;
+      try{obj=JSON.parse(text)}catch(e){err.textContent="备份文件解析失败，文件内容不合法";return}
+      if(obj?.backupType!=="tablet-checkin-full-backup" || !obj.data){
+        err.textContent="备份文件格式不正确";return;
+      }
+      const msg=validateBackupData(obj.data);
+      if(msg){err.textContent="备份文件校验失败："+msg;return}
+      const newData=normalizeData(obj.data);
+      closeModal();
+      confirmModal("确认恢复","导入将覆盖当前所有本地数据，确定继续？",()=>{
+        state.data=newData;
+        saveData();
+        clearSession();
+        toast("数据恢复成功，正在刷新页面","success");
+        setTimeout(()=>location.reload(),700);
+      });
+    };
+  },0);
+}
+async function copyText(text){
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(e){}
+  try{
+    const ta=document.createElement("textarea");
+    ta.value=text;ta.style.position="fixed";ta.style.left="-9999px";
+    document.body.appendChild(ta);ta.focus();ta.select();
+    const ok=document.execCommand("copy");ta.remove();return ok;
+  }catch(e){return false}
+}
+
+function login(username,password){
+  const account=state.data.accounts[username];
+  if(!account || account.password!==password){
+    return {ok:false,msg:"账号或密码错误"};
+  }
+  setSession(username);
+  state.page="home";
+  ensureDailyTaskData();
+  render();
+  if(account.mustChangePassword){
+    setTimeout(()=>openChangePassword(true),100);
+  }
+  return {ok:true};
+}
+function logout(){
+  clearSession();
+  state.page="login";
+  render();
+}
+function authGuard(){
+  if(!state.session || !state.data.accounts[state.session.username]){
+    clearSession();return false;
+  }
+  return true;
+}
+function requireAdmin(){
+  if(!isAdmin()){toast("无访问权限","error");return false}
+  return true;
+}
+function requireStudent(){
+  if(!isStudent()){toast("无访问权限","error");return false}
+  return true;
+}
+
+function render(){
+  const app=document.getElementById("app");
+  document.querySelectorAll(".modal-mask").forEach(el=>el.remove());
+  ensureDailyTaskData();
+  if(!authGuard()){
+    app.innerHTML=renderLogin();
+    return;
+  }
+  app.innerHTML=renderShell();
+  if(state.modal)renderModal();
+}
+function renderLogin(){
+  return `<div class="login-page">
+    <div class="login-card">
+      <div class="logo">✓</div>
+      <div class="center">
+        <h1>平板单机版打卡系统</h1>
+        <div class="muted">纯本地运行 · 数据保存在当前设备</div>
+      </div>
+      <form onsubmit="event.preventDefault();submitLogin()">
+        <div class="form-group">
+          <label>账号</label>
+          <input id="loginUsername" autocomplete="username" placeholder="请输入账号">
+          <div id="loginUserError" class="form-error"></div>
+        </div>
+        <div class="form-group">
+          <label>密码</label>
+          <div class="login-input-wrap">
+            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="请输入密码">
+            <button type="button" class="password-toggle" onclick="togglePassword('loginPassword',this)">显示</button>
+          </div>
+          <div id="loginPassError" class="form-error"></div>
+        </div>
+        <button class="primary" style="width:100%" type="submit">登录</button>
+      </form>
+      <div class="login-hint">默认管理员：admin / 123456　　测试学生：student001 / 123456</div>
+      <div class="footer-note">所有账号、打卡及成就数据仅存储在当前浏览器 LocalStorage。</div>
+    </div>
+  </div>`;
+}
+function submitLogin(){
+  const u=document.getElementById("loginUsername").value.trim();
+  const p=document.getElementById("loginPassword").value;
+  const ue=document.getElementById("loginUserError"),pe=document.getElementById("loginPassError");
+  ue.textContent="";pe.textContent="";
+  if(!u){ue.textContent="请输入账号";return}
+  if(!p){pe.textContent="请输入密码";return}
+  const r=login(u,p);
+  if(!r.ok){pe.textContent=r.msg;toast(r.msg,"error")}
+}
+function togglePassword(id,btn){
+  const el=document.getElementById(id);
+  if(el.type==="password"){el.type="text";btn.textContent="隐藏"}
+  else{el.type="password";btn.textContent="显示"}
+}
+
+function renderShell(){
+  const u=getCurrentUser();
+  const nav=isAdmin()
+    ? `<button class="${state.page==="home"?"active":""}" onclick="go('home')">首页</button>
+       <button class="${state.page==="tasks"?"active":""}" onclick="go('tasks')">任务管理</button>
+       <button class="${state.page==="students"?"active":""}" onclick="go('students')">学生账号</button>
+       <button class="${state.page==="records"?"active":""}" onclick="go('records')">全员打卡</button>`
+    : `<button class="${state.page==="home"?"active":""}" onclick="go('home')">今日打卡</button>
+       <button class="${state.page==="records"?"active":""}" onclick="go('records')">我的记录</button>
+       <button class="${state.page==="achievements"?"active":""}" onclick="go('achievements')">成就墙</button>`;
+  let content="";
+  if(state.page==="home")content=isAdmin()?renderAdminHome():renderStudentHome();
+  else if(state.page==="tasks"&&isAdmin())content=renderTaskManagement();
+  else if(state.page==="students"&&isAdmin())content=renderStudentManagement();
+  else if(state.page==="records")content=isAdmin()?renderAllRecords():renderStudentRecords();
+  else if(state.page==="achievements"&&isStudent())content=renderAchievements();
+  else {state.page="home";content=isAdmin()?renderAdminHome():renderStudentHome();}
+  return `<div class="app">
+    <header class="header">
+      <div class="header-left"><div class="logo" style="width:44px;height:44px;border-radius:12px;font-size:22px;margin:0">✓</div>
+        <div><div class="header-title">${escapeHtml(state.data.settings.appName)}</div><div class="small muted">${escapeHtml(u.name)} · ${u.role==="admin"?"管理员":"学生"}</div></div>
+      </div>
+      <div class="header-actions">
+        <button class="secondary" onclick="openChangePassword(false)">修改密码</button>
+        <button class="secondary" onclick="logout()">退出登录</button>
+      </div>
+    </header>
+    <main class="container">
+      <nav class="nav">${nav}</nav>
+      ${content}
+    </main>
+  </div>`;
+}
+function go(page){
+  if(page==="tasks"&&!isAdmin()){toast("无访问权限","error");return}
+  if(page==="students"&&!isAdmin()){toast("无访问权限","error");return}
+  if(page==="achievements"&&!isStudent()){toast("无访问权限","error");return}
+  state.page=page;render();
+}
+
+function renderAdminHome(){
+  const students=Object.values(state.data.accounts).filter(x=>x.role==="student");
+  const tasks=state.data.taskTemplates.filter(x=>x.enabled);
+  const todayTasks=getTodayTasks();
+  const completed=students.reduce((n,s)=>n+todayTasks.filter(t=>isTaskCompleted(s.username,dateKey(),t.instanceId)).length,0);
+  const total=students.length*todayTasks.length;
+  return `<div class="toolbar"><div><h2>管理员首页</h2><div class="muted">今天是 ${dateKey()}，${todayAfterOpen()?"今日任务已开放":"每日05:00后生成今日任务"}</div></div>
+    <div class="toolbar-right"><button class="primary" onclick="go('records')">查看全员打卡</button><button class="secondary" onclick="openBackupMenu()">数据备份恢复</button></div></div>
+    <div class="kpi">
+      <div class="card"><div class="muted">学生人数</div><div class="stat-number">${students.length}</div></div>
+      <div class="card"><div class="muted">启用任务</div><div class="stat-number">${tasks.length}</div></div>
+      <div class="card"><div class="muted">今日任务数</div><div class="stat-number">${todayTasks.length}</div></div>
+      <div class="card"><div class="muted">今日完成率</div><div class="stat-number">${total?Math.round(completed/total*100):0}%</div></div>
+    </div>
+    <div class="grid grid-2" style="margin-top:16px">
+      <div class="card"><h3>系统说明</h3>
+        <p class="muted">每日05:00自动根据启用任务模板生成当日任务。页面重新进入或从后台恢复时会再次校验并补全任务。</p>
+        <div class="notice">系统时间使用平板本地时间。前端倒计时仅用于展示，最终打卡权限以当前系统时间判断。</div>
+      </div>
+      <div class="card"><h3>数据安全</h3>
+        <p class="muted">建议管理员定期执行全量备份，并将剪贴板内容粘贴到平板本地记事本保存为JSON文件。</p>
+        <div class="warning-box">不要只把备份留在剪贴板；复制其他内容后，剪贴板中的备份会被覆盖。</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px"><h3>今日任务</h3>${renderTodayTaskSummary()}</div>`;
+}
+function renderTodayTaskSummary(){
+  const tasks=getTodayTasks();
+  if(!todayAfterOpen())return `<div class="empty">今日05:00前任务尚未开放。</div>`;
+  if(!tasks.length)return `<div class="empty">暂无启用的打卡任务。</div>`;
+  return `<div class="grid grid-2">${tasks.map(t=>`<div class="task-card">
+    <div class="task-head"><div><div class="task-name">${escapeHtml(t.name)}</div><div class="task-desc">${escapeHtml(t.description||"")}</div></div>
+    <span class="badge badge-warning">截止 ${escapeHtml(t.deadline)}</span></div>
+  </div>`).join("")}</div>`;
+}
+
+function renderStudentHome(){
+  const u=getCurrentUser();
+  const tasks=getTodayTasks();
+  const ach=state.data.achievements[u.username]||[];
+  const completed=tasks.filter(t=>isTaskCompleted(u.username,dateKey(),t.instanceId)).length;
+  const percent=tasks.length?Math.round(completed/tasks.length*100):0;
+  return `<div class="toolbar"><div><h2>今日打卡</h2><div class="muted">${dateKey()} · 当前时间 ${timeKey()}</div></div>
+    <div class="toolbar-right"><button class="secondary" onclick="go('achievements')">我的成就 ${ach.length}</button></div></div>
+    ${!todayAfterOpen()?`<div class="notice">今日打卡任务尚未开放，05:00后更新。</div>`:""}
+    ${todayAfterOpen()&&!tasks.length?`<div class="warning-box">暂无打卡任务，请等待管理员启用任务。</div>`:""}
+    ${tasks.length?`<div class="card" style="margin-bottom:16px"><div class="stat"><div><b>今日完成进度</b><div class="small muted">${completed}/${tasks.length} 个任务</div></div><b>${percent}%</b></div><div class="progress" style="margin-top:10px"><span style="width:${percent}%"></span></div></div>`:""}
+    <div class="grid">${tasks.map(t=>renderStudentTaskCard(t,u.username)).join("")}</div>
+    <div class="footer-note">当日所有任务全部完成且均未超过截止时间，将自动获得一张成就。</div>`;
+}
+function renderStudentTaskCard(t,username){
+  const done=isTaskCompleted(username,dateKey(),t.instanceId);
+  const a=getAttendance(username,dateKey())[t.instanceId];
+  const status=taskCanCheckin(t);
+  let button="";
+  if(done)button=`<button class="checkin-btn done" disabled>✓ 已完成</button>`;
+  else if(status.reason==="not-open")button=`<button class="checkin-btn locked" disabled>05:00后开放</button>`;
+  else if(status.reason==="expired")button=`<button class="checkin-btn locked" disabled>已过截止时间</button>`;
+  else button=`<button class="checkin-btn primary" onclick="checkin('${t.instanceId}')">立即打卡</button>`;
+  return `<div class="task-card">
+    <div class="task-head"><div><div class="task-name">${escapeHtml(t.name)}</div><div class="task-desc">${escapeHtml(t.description||"")}</div></div>
+    <span class="badge ${deadlinePassed(t)?"badge-danger":"badge-warning"}">截止 ${escapeHtml(t.deadline)}</span></div>
+    <div class="task-foot"><div class="small muted">${done?"打卡时间："+formatDateTime(a.checkinTime):"请在截止时间前完成打卡"}</div>${button}</div>
+  </div>`;
+}
+function checkin(instanceId){
+  if(!requireStudent())return;
+  ensureDailyTaskData();
+  const tasks=getTodayTasks(),task=tasks.find(t=>t.instanceId===instanceId);
+  if(!task){toast("任务不存在","error");return}
+  if(isTaskCompleted(state.session.username,dateKey(),instanceId)){toast("请勿重复打卡","warning");return}
+  const c=taskCanCheckin(task);
+  if(!c.ok){
+    toast(c.reason==="expired"?"已过打卡截止时间，无法打卡":"今日打卡任务尚未开放，05:00后更新","warning");
+    render();return;
+  }
+  const now=new Date();
+  setAttendance(state.session.username,dateKey(),instanceId,{completed:true,checkinTime:now.toISOString()});
+  saveData();
+  playDing();
+  toast("打卡成功","success");
+  render();
+}
+
+function renderTaskManagement(){
+  const list=state.data.taskTemplates;
+  return `<div class="toolbar"><div><h2>打卡任务管理</h2><div class="muted">维护每日任务模板；删除模板不会删除历史打卡记录。</div></div>
+    <div class="toolbar-right"><button class="primary" onclick="openTaskModal()">＋ 新增任务</button><button class="secondary" onclick="openBackupMenu()">数据备份恢复</button></div></div>
+    <div class="notice">每日05:00根据“启用”状态生成当日任务。当天任务生成后，任务名称、描述和截止时间以当日快照为准，不影响历史数据。</div>
+    <div class="table-wrap"><table><thead><tr><th>任务名称</th><th>描述</th><th>每日截止时间</th><th>状态</th><th>操作</th></tr></thead><tbody>
+      ${list.length?list.map(t=>`<tr><td><b>${escapeHtml(t.name)}</b></td><td>${escapeHtml(t.description||"-")}</td><td>${escapeHtml(t.deadline)}</td>
+      <td>${t.enabled?'<span class="badge badge-success">启用</span>':'<span class="badge badge-gray">停用</span>'}</td>
+      <td><div class="toolbar-left"><button class="secondary" onclick="openTaskModal('${t.id}')">编辑</button><button class="danger" onclick="deleteTask('${t.id}')">删除</button></div></td></tr>`).join("")
+      :`<tr><td colspan="5"><div class="empty">暂无任务模板</div></td></tr>`}
+    </tbody></table></div>`;
+}
+function openTaskModal(id=null){
+  const t=id?state.data.taskTemplates.find(x=>x.id===id):null;
+  showModal(id?"编辑任务":"新增任务",
+    `<div class="form-group"><label>任务名称</label><input id="taskName" maxlength="50" value="${escapeHtml(t?.name||"")}" placeholder="例如：晨读"></div>
+     <div class="form-group"><label>任务描述</label><textarea id="taskDesc" style="min-height:110px" maxlength="300" placeholder="请输入任务描述">${escapeHtml(t?.description||"")}</textarea></div>
+     <div class="form-group"><label>每日打卡截止时间</label><input id="taskDeadline" type="time" value="${escapeHtml(t?.deadline||"20:00")}"></div>
+     <div class="checkbox-row"><input id="taskEnabled" type="checkbox" ${t?.enabled!==false?"checked":""}><label for="taskEnabled">启用任务</label></div>
+     <div id="taskFormError" class="form-error"></div>`,
+    `<button class="secondary" onclick="closeModal()">取消</button><button class="primary" id="saveTaskBtn">保存</button>`);
+  setTimeout(()=>{
+    document.getElementById("saveTaskBtn").onclick=()=>saveTask(id);
+  },0);
+}
+function saveTask(id){
+  const name=document.getElementById("taskName").value.trim();
+  const desc=document.getElementById("taskDesc").value.trim();
+  const deadline=document.getElementById("taskDeadline").value;
+  const enabled=document.getElementById("taskEnabled").checked;
+  const err=document.getElementById("taskFormError");
+  if(!name){err.textContent="任务名称不能为空";return}
+  if(timeToMinutes(deadline)<0){err.textContent="请输入有效截止时间";return}
+  const duplicate=state.data.taskTemplates.some(x=>x.id!==id && x.name===name);
+  if(duplicate){err.textContent="任务名称已存在";return}
+  if(id){
+    const t=state.data.taskTemplates.find(x=>x.id===id);
+    Object.assign(t,{name,description:desc,deadline,enabled});
+    const today=dateKey();
+    if(state.data.dailyTasks[today]){
+      const daily=state.data.dailyTasks[today].find(x=>x.templateId===id);
+      if(daily){
+        daily.name=name;
+        daily.description=desc;
+        daily.deadline=deadline;
+      }
+    }
+  }else{
+    state.data.taskTemplates.push({id:uid("task"),name,description:desc,deadline,enabled,createdAt:new Date().toISOString()});
+  }
+  saveData();closeModal();toast(id?"任务修改成功":"任务新增成功","success");render();
+}
+function deleteTask(id){
+  const t=state.data.taskTemplates.find(x=>x.id===id);
+  if(!t)return;
+  confirmModal("删除任务",`确定删除“${t.name}”任务模板吗？历史打卡记录会永久保留，次日不再生成该任务。`,()=>{
+    state.data.taskTemplates=state.data.taskTemplates.filter(x=>x.id!==id);
+    saveData();toast("任务模板已删除","success");render();
+  });
+}
+
+function renderStudentManagement(){
+  const list=Object.values(state.data.accounts).filter(x=>x.role==="student");
+  return `<div class="toolbar"><div><h2>学生账号管理</h2><div class="muted">管理员可创建学生账号、重置学生密码。</div></div>
+    <button class="primary" onclick="openStudentModal()">＋ 新建学生</button></div>
+    <div class="table-wrap"><table><thead><tr><th>账号</th><th>姓名</th><th>创建时间</th><th>密码状态</th><th>操作</th></tr></thead><tbody>
+    ${list.length?list.map(s=>`<tr><td><b>${escapeHtml(s.username)}</b></td><td>${escapeHtml(s.name)}</td><td>${formatDateTime(s.createdAt)}</td>
+      <td>${s.mustChangePassword?'<span class="badge badge-warning">首次登录需改密</span>':'<span class="badge badge-success">正常</span>'}</td>
+      <td><button class="secondary" onclick="resetStudentPassword('${escapeHtml(s.username)}')">重置密码</button></td></tr>`).join("")
+    :`<tr><td colspan="5"><div class="empty">暂无学生账号</div></td></tr>`}
+    </tbody></table></div>`;
+}
+function openStudentModal(){
+  showModal("新建学生账号",
+    `<div class="form-group"><label>账号</label><input id="studentUsername" maxlength="32" placeholder="3-32位字母、数字、下划线或短横线"></div>
+     <div class="form-group"><label>姓名</label><input id="studentName" maxlength="30" placeholder="学生姓名"></div>
+     <div class="form-group"><label>初始密码</label><input id="studentPassword" type="password" maxlength="64" placeholder="至少6位"></div>
+     <div id="studentFormError" class="form-error"></div>`,
+    `<button class="secondary" onclick="closeModal()">取消</button><button class="primary" id="saveStudentBtn">创建</button>`);
+  setTimeout(()=>document.getElementById("saveStudentBtn").onclick=saveStudent,0);
+}
+function saveStudent(){
+  const username=document.getElementById("studentUsername").value.trim();
+  const name=document.getElementById("studentName").value.trim();
+  const password=document.getElementById("studentPassword").value;
+  const err=document.getElementById("studentFormError");
+  if(!validateUsername(username)){err.textContent="账号需为3-32位字母、数字、下划线或短横线";return}
+  if(state.data.accounts[username]){err.textContent="账号已存在";return}
+  if(!name){err.textContent="姓名不能为空";return}
+  if(!validatePassword(password)){err.textContent="密码长度必须为6-64位";return}
+  state.data.accounts[username]={username,name,role:"student",password,mustChangePassword:false,createdAt:new Date().toISOString()};
+  saveData();closeModal();toast("学生账号创建成功","success");render();
+}
+function resetStudentPassword(username){
+  const s=state.data.accounts[username];
+  if(!s)return;
+  const defaultPassword="123456";
+  confirmModal("重置学生密码",`确定将“${s.name}（${username}）”的密码重置为默认密码 123456 吗？`,()=>{
+    s.password=defaultPassword;s.mustChangePassword=true;
+    saveData();
+    showModal("密码重置成功",
+      `<div class="notice">学生下次登录必须修改密码。</div><div style="font-size:20px;text-align:center;font-weight:800;padding:12px">123456</div><div class="small muted center">此密码仅本次展示，请及时告知学生。</div>`,
+      `<button class="primary" onclick="closeModal()">关闭</button>`);
+  });
+}
+
+function renderAllRecords(){
+  const students=Object.values(state.data.accounts).filter(x=>x.role==="student");
+  const dates=Object.keys(state.data.dailyTasks).sort().reverse();
+  const today=dateKey();
+  return `<div class="toolbar"><div><h2>全员打卡情况</h2><div class="muted">仅查看，不允许管理员直接修改学生打卡数据。</div></div>
+    <div class="toolbar-right"><button class="primary" onclick="unlockAchievements()">成就达成</button><button class="secondary" onclick="openBackupMenu()">数据备份</button><button class="secondary" onclick="importBackup()">导入恢复</button></div></div>
+    <div class="notice">【成就达成】手动检查所有学生的打卡完成情况，将符合条件的成就解锁发放给学生。</div>
+    <div class="search-row">
+      <select id="recordDate" onchange="render()"><option value="">全部日期</option>${dates.map(d=>`<option value="${d}" ${d===today?"selected":""}>${d}</option>`).join("")}</select>
+      <select id="recordStudent" onchange="render()"><option value="">全部学生</option>${students.map(s=>`<option value="${escapeHtml(s.username)}">${escapeHtml(s.name)}（${escapeHtml(s.username)}）</option>`).join("")}</select>
+      <select id="recordStatus" onchange="render()"><option value="">全部状态</option><option value="completed">已完成</option><option value="pending">未完成</option></select>
+      <button class="secondary" onclick="clearRecordFilters()">清除筛选</button>
+    </div>
+    ${renderAllRecordTable(students)}`;
+}
+function getFilter(id){return document.getElementById(id)?.value||""}
+function renderAllRecordTable(students){
+  const dateFilter=getFilter("recordDate"),studentFilter=getFilter("recordStudent"),statusFilter=getFilter("recordStatus");
+  const rows=[];
+  const dates=Object.keys(state.data.dailyTasks).sort().reverse();
+  for(const d of dates){
+    if(dateFilter&&d!==dateFilter)continue;
+    for(const s of students){
+      if(studentFilter&&s.username!==studentFilter)continue;
+      const tasks=state.data.dailyTasks[d]||[];
+      if(!tasks.length){
+        if(!statusFilter)rows.push({d,s,t:null,a:null});
+        continue;
+      }
+      for(const t of tasks){
+        const a=getAttendance(s.username,d)[t.instanceId];
+        const done=!!a?.completed;
+        if(statusFilter==="completed"&&!done)continue;
+        if(statusFilter==="pending"&&done)continue;
+        rows.push({d,s,t,a});
+      }
+    }
+  }
+  return `<div class="table-wrap"><table><thead><tr><th>日期</th><th>学生</th><th>任务</th><th>截止时间</th><th>状态</th><th>打卡时间</th></tr></thead><tbody>
+    ${rows.length?rows.map(r=>r.t?`<tr><td>${r.d}</td><td>${escapeHtml(r.s.name)}<br><span class="small muted">${escapeHtml(r.s.username)}</span></td><td>${escapeHtml(r.t.name)}</td><td>${escapeHtml(r.t.deadline)}</td>
+      <td>${r.a?.completed?'<span class="badge badge-success">已完成</span>':'<span class="badge badge-danger">未完成</span>'}</td><td>${r.a?.checkinTime?formatDateTime(r.a.checkinTime):"-"}</td></tr>`
+      :`<tr><td>${r.d}</td><td>${escapeHtml(r.s.name)}</td><td colspan="4">当天暂无任务</td></tr>`).join("")
+    :`<tr><td colspan="6"><div class="empty">没有符合筛选条件的记录</div></td></tr>`}
+  </tbody></table></div>`;
+}
+function clearRecordFilters(){
+  state.page="records";render();
+}
+
+function renderStudentRecords(){
+  const username=state.session.username;
+  const dates=Object.keys(state.data.dailyTasks).sort().reverse();
+  return `<div class="toolbar"><div><h2>我的打卡记录</h2><div class="muted">仅查看个人历史打卡记录。</div></div><button class="secondary" onclick="go('achievements')">查看成就墙</button></div>
+    <div class="grid">${dates.length?dates.map(d=>renderStudentRecordDate(username,d)).join(""):`<div class="card empty">暂无历史打卡记录</div>`}</div>`;
+}
+function renderStudentRecordDate(username,d){
+  const tasks=state.data.dailyTasks[d]||[];
+  if(!tasks.length)return "";
+  const done=tasks.filter(t=>isTaskCompleted(username,d,t.instanceId)).length;
+  return `<div class="card"><div class="toolbar" style="margin-bottom:10px"><div><h3>${d}</h3><div class="small muted">${done}/${tasks.length} 已完成</div></div>
+    ${allTasksCompleted(username,d)?'<span class="badge badge-success">全勤成就日</span>':''}</div>
+    <div>${tasks.map(t=>{const a=getAttendance(username,d)[t.instanceId];return `<div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div><b>${escapeHtml(t.name)}</b><div class="small muted">截止 ${escapeHtml(t.deadline)}</div></div>
+      <div>${a?.completed?`<span class="badge badge-success">✓ 已完成 ${formatDateTime(a.checkinTime)}</span>`:'<span class="badge badge-danger">未完成</span>'}</div>
+    </div>`}).join("")}</div>
+  </div>`;
+}
+
+function renderAchievements(){
+  const username=state.session.username;
+  const unlocked=state.data.achievements[username]||[];
+  const map=getAchievementMap(username);
+  const pageCount=Math.ceil(ACHIEVEMENTS.length/6);
+  const p=Math.min(state.achievementPage,pageCount-1);
+  const items=ACHIEVEMENTS.slice(p*6,p*6+6);
+  return `<div class="toolbar"><div><h2>成就墙</h2><div class="muted">已解锁 ${unlocked.length}/${ACHIEVEMENTS.length} 张成就</div></div>
+    <div class="toolbar-right"><button class="secondary" onclick="go('home')">返回今日打卡</button></div></div>
+    <div class="achievement-grid">${items.map(a=>{
+      const u=map[a.id];
+      return `<div class="achievement-card ${u?"unlocked":""}">
+        <div class="achievement-img-wrap"><img class="achievement-img" src="${escapeHtml(a.image)}" alt="${escapeHtml(a.name)}" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgPlaceholder())}'"></div>
+        <div class="achievement-date">${u?"解锁日期："+escapeHtml(u.unlockDate):"尚未解锁"}</div>
+      </div>`;
+    }).join("")}</div>
+    <div class="pager"><button class="secondary" ${p<=0?"disabled":""} onclick="changeAchievementPage(-1)">上一页</button>
+      <span class="muted">第 ${p+1} / ${pageCount} 页</span>
+      <button class="secondary" ${p>=pageCount-1?"disabled":""} onclick="changeAchievementPage(1)">下一页</button></div>`;
+}
+function changeAchievementPage(delta){
+  const count=Math.ceil(ACHIEVEMENTS.length/6);
+  state.achievementPage=Math.max(0,Math.min(count-1,state.achievementPage+delta));
+  render();
+}
+function svgPlaceholder(){
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><rect width="128" height="128" rx="18" fill="#e9edf3"/><text x="64" y="72" text-anchor="middle" font-size="24" fill="#667085">待更新</text></svg>`;
+}
+
+function openBackupMenu(){
+  showModal("数据备份恢复",
+    `<div class="grid">
+      <div class="card" style="box-shadow:none;border:1px solid var(--border)"><h3>成就达成 / 全量备份</h3><p class="muted">同步最新成就状态，并将全部系统数据生成JSON复制到剪贴板。</p><button class="primary" style="width:100%" onclick="closeModal();setTimeout(exportBackup,0)">执行全量备份</button></div>
+      <div class="card" style="box-shadow:none;border:1px solid var(--border)"><h3>导入恢复</h3><p class="muted">将本地JSON备份内容粘贴到文本框，校验后覆盖当前LocalStorage数据。</p><button class="secondary" style="width:100%" onclick="closeModal();setTimeout(importBackup,0)">导入恢复</button></div>
+    </div>
+    <div class="warning-box" style="margin-top:16px">恢复操作会覆盖当前所有本地数据，执行前请确认已有最新备份。</div>`,
+    `<button class="secondary" onclick="closeModal()">关闭</button>`);
+}
+
+function openChangePassword(force){
+  const u=getCurrentUser();
+  showModal(force?"首次登录请修改密码":"修改密码",
+    `${force?'<div class="warning-box">管理员已要求你首次登录修改密码，修改成功后才能继续正常使用。</div>':""}
+     <div class="form-group"><label>旧密码</label><input id="oldPassword" type="password"></div>
+     <div class="form-group"><label>新密码</label><input id="newPassword" type="password" placeholder="6-64位"></div>
+     <div class="form-group"><label>确认新密码</label><input id="confirmPassword" type="password"></div>
+     <div id="passwordError" class="form-error"></div>`,
+    force?`<button class="primary" onclick="changePassword(true)">确认修改</button>`:
+    `<button class="secondary" onclick="closeModal()">取消</button><button class="primary" onclick="changePassword(false)">保存</button>`);
+}
+function changePassword(force){
+  const u=getCurrentUser();
+  const oldP=document.getElementById("oldPassword").value;
+  const newP=document.getElementById("newPassword").value;
+  const con=document.getElementById("confirmPassword").value;
+  const err=document.getElementById("passwordError");
+  if(oldP!==u.password){err.textContent="旧密码错误";return}
+  if(!validatePassword(newP)){err.textContent="新密码长度必须为6-64位";return}
+  if(newP!==con){err.textContent="两次输入的新密码不一致";return}
+  if(newP===oldP){err.textContent="新密码不能与旧密码相同";return}
+  u.password=newP;u.mustChangePassword=false;saveData();closeModal();toast("密码修改成功","success");render();
+}
+
+function renderModal(){
+  const root=document.createElement("div");
+  root.className="modal-mask";
+  root.innerHTML=`<div class="modal">
+    <div class="modal-head"><h3>${escapeHtml(state.modal.title)}</h3><button class="icon-btn" onclick="closeModal()">×</button></div>
+    <div class="modal-body">${state.modal.body}</div>
+    <div class="modal-foot">${state.modal.footer}</div>
+  </div>`;
+  document.body.appendChild(root);
+}
+
+function tick(){
+  if(!authGuard())return;
+  if(state.modal)return;
+  const d=dateKey();
+  if(d!==state.lastDate){
+    state.lastDate=d;
+    ensureDailyTaskData();
+    render();
+    return;
+  }
+  ensureDailyTaskData();
+  const active=document.querySelector(".app");
+  if(active && state.page==="home" && isStudent()){
+    const time=document.querySelector(".header-title");
+    // 页面状态按秒刷新，保证截止时间UI及时锁定。
+    render();
+  }
+}
+
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden){
+    ensureDailyTaskData();
+    if(!state.modal)render();
+  }
+});
+window.addEventListener("pageshow",()=>{
+  ensureDailyTaskData();
+  if(!state.modal)render();
+});
+
+state.data=loadData();
+state.lastDate=dateKey();
+loadSession();
+ensureDailyTaskData();
+render();
+setInterval(tick,1000);
+</script>
+</body>
+</html>
