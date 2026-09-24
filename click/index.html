@@ -69,10 +69,10 @@ th{background:#f8fafc;font-weight:700;position:sticky;top:0}
 .icon-btn{width:48px;padding:0;background:#eef2f7;color:#374151}
 .form-error{color:var(--danger);font-size:13px;margin-top:6px;min-height:18px}
 .checkbox-row{display:flex;align-items:center;gap:10px;min-height:48px}.checkbox-row input{width:22px;height:22px;min-height:22px}
-.achievement-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:16px}
+.achievement-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:16px}
 .achievement-card{background:#fff;border-radius:18px;padding:14px;box-shadow:var(--shadow);text-align:center;min-width:0}
 .achievement-img-wrap{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:14px;background:linear-gradient(135deg,#e0f2fe,#bae6fd,#7dd3fc,#38bdf8);overflow:hidden}
-.achievement-img{width:128px;height:128px;max-width:100%;object-fit:contain;filter:grayscale(1);opacity:.55;transition:filter .6s ease,opacity .6s ease,transform .6s ease}
+.achievement-img{width:256px;height:256px;max-width:100%;object-fit:contain;filter:grayscale(1);opacity:.55;transition:filter .6s ease,opacity .6s ease,transform .6s ease}
 .achievement-card.unlocked .achievement-img{filter:none;opacity:1}
 .achievement-card.newly .achievement-img{animation:unlock .6s ease}
 @keyframes unlock{0%{filter:grayscale(1);opacity:.35;transform:scale(.9)}60%{filter:none;opacity:1;transform:scale(1.08)}100%{transform:scale(1)}}
@@ -97,7 +97,7 @@ pre.json-preview{white-space:pre-wrap;word-break:break-all;background:#111827;co
 @media(max-width:520px){
   .login-card{padding:22px}.header{align-items:flex-start}.header-actions button{padding:0 12px}
   .search-row{grid-template-columns:1fr}.achievement-grid{gap:8px}
-  .achievement-card{border-radius:12px}.achievement-img{width:100px;height:100px}
+  .achievement-card{border-radius:12px}.achievement-img{width:128px;height:128px}
   .modal{border-radius:16px}.modal-mask{padding:8px}
 }
 </style>
@@ -121,28 +121,28 @@ const APP_VERSION = 1;
 const OPEN_HOUR = 5;
 
 const ACHIEVEMENTS = [
-  ["rat","鼠","https://i-blog.csdnimg.cn/direct/39ec524bc1e04db5bf24dd83038186cd.png"],
-  ["ox","牛","https://i-blog.csdnimg.cn/direct/acd4be3e8a6940a3a2bb9e9f8301293b.png"],
-  ["tiger","虎","https://i-blog.csdnimg.cn/direct/994fed9a4ec44a068358b15e0737a64b.png"],
-  ["rabbit","兔","https://i-blog.csdnimg.cn/direct/27550114e961439fab056ad84e45da3b.png"],
-  ["dragon","龙","https://i-blog.csdnimg.cn/direct/2a8db420095142b1912f003053e6d842.png"],
-  ["snake","蛇","https://i-blog.csdnimg.cn/direct/c41065e473da4ef19c8a280f7c05c460.png"],
-  ["horse","马","https://i-blog.csdnimg.cn/direct/ce16bfe16dda4e6b98a620d1740d4eec.png"],
-  ["goat","羊","https://i-blog.csdnimg.cn/direct/13a3798c0f4d4b448e8267d26bf732d9.png"],
-  ["monkey","猴","https://i-blog.csdnimg.cn/direct/2953617085a7487f8753676bfd1c0a6e.png"],
-  ["rooster","鸡","https://i-blog.csdnimg.cn/direct/cf43177fa99a48e289a21dfcdd00c01f.png"],
-  ["dog","狗","https://i-blog.csdnimg.cn/direct/b4f5f8206f294e8a847756084ffcda73.png"],
-  ["pig","猪","https://i-blog.csdnimg.cn/direct/db20ce3a037747718fc54d99422a7989.png"],
-  ["great_wall","长城","https://i-blog.csdnimg.cn/direct/22bf64c3331f4e8c83dbf0a4224fd7a9.png"],
-  ["forbidden_city","故宫","https://i-blog.csdnimg.cn/direct/29ad7f58ab0942ca930667932b4738ab.png"],
-  ["temple_of_heaven","天坛","https://i-blog.csdnimg.cn/direct/9ad8c56c412d4d6a9216ff53d68780cb.png"],
-  ["terracotta","兵马俑","https://i-blog.csdnimg.cn/direct/f84f6ec7583c41109539fa25d9f7f74e.png"],
-  ["potala","布达拉宫","https://i-blog.csdnimg.cn/direct/9a53d8f084144007a0ca301463843efb.png"],
-  ["eiffel","埃菲尔铁塔","https://i-blog.csdnimg.cn/direct/2a35c408835141c09836e6c523981ee2.png"],
-  ["liberty","自由女神像","https://i-blog.csdnimg.cn/direct/c720761983d24c7e88bab617784ee4f5.png"],
-  ["pyramid","金字塔","https://i-blog.csdnimg.cn/direct/a69c2264e56b4643a98d9084d60d1b0b.png"],
-  ["taj_mahal","泰姬陵","https://i-blog.csdnimg.cn/direct/ad45101a54094efbb3dab961bb3da7c4.png"],
-  ["opera_house","悉尼歌剧院","https://i-blog.csdnimg.cn/direct/8a2864953f6c4801a7cafa4a3d5f7ab9.png"],
+  ["rat","鼠","https://yingwu1988.github.io/Static/click/img/1.png"],
+  ["ox","牛","https://yingwu1988.github.io/Static/click/img/2.png"],
+  ["tiger","虎","https://yingwu1988.github.io/Static/click/img/3.png"],
+  ["rabbit","兔","https://yingwu1988.github.io/Static/click/img/4.png"],
+  ["dragon","龙","https://yingwu1988.github.io/Static/click/img/5.png"],
+  ["snake","蛇","https://yingwu1988.github.io/Static/click/img/6.png"],
+  ["horse","马","https://yingwu1988.github.io/Static/click/img/7.png"],
+  ["goat","羊","https://yingwu1988.github.io/Static/click/img/8.png"],
+  ["monkey","猴","https://yingwu1988.github.io/Static/click/img/9.png"],
+  ["rooster","鸡","https://yingwu1988.github.io/Static/click/img/10.png"],
+  ["dog","狗","https://yingwu1988.github.io/Static/click/img/11.png"],
+  ["pig","猪","https://yingwu1988.github.io/Static/click/img/12.png"],
+  ["great_wall","长城","https://yingwu1988.github.io/Static/click/img/13.png"],
+  ["forbidden_city","故宫","https://yingwu1988.github.io/Static/click/img/14.png"],
+  ["temple_of_heaven","天坛","https://yingwu1988.github.io/Static/click/img/15.png"],
+  ["terracotta","兵马俑","https://yingwu1988.github.io/Static/click/img/16.png"],
+  ["potala","布达拉宫","https://yingwu1988.github.io/Static/click/img/17.png"],
+  ["eiffel","埃菲尔铁塔","https://yingwu1988.github.io/Static/click/img/18.png"],
+  ["liberty","自由女神像","https://yingwu1988.github.io/Static/click/img/19.png"],
+  ["pyramid","金字塔","https://yingwu1988.github.io/Static/click/img/20.png"],
+  ["taj_mahal","泰姬陵","https://yingwu1988.github.io/Static/click/img/21.png"],
+  ["opera_house","悉尼歌剧院","https://yingwu1988.github.io/Static/click/img/22.png"],
   ["fuji","富士山","fuji.png"],["big_ben","大本钟","big_ben.png"]
 ].map(([id,name,image])=>({id,name,image}));
 
