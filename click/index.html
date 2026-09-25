@@ -71,8 +71,9 @@ th{background:#f8fafc;font-weight:700;position:sticky;top:0}
 .checkbox-row{display:flex;align-items:center;gap:10px;min-height:48px}.checkbox-row input{width:22px;height:22px;min-height:22px}
 .achievement-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:16px}
 .achievement-card{background:#fff;border-radius:18px;padding:14px;box-shadow:var(--shadow);text-align:center;min-width:0}
-.achievement-img-wrap{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:14px;background:linear-gradient(135deg,#e0f2fe,#bae6fd,#7dd3fc,#38bdf8);overflow:hidden}
+.achievement-img-wrap{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:14px;background:linear-gradient(135deg,#e0f2fe,#bae6fd,#7dd3fc,#38bdf8);overflow:hidden;box-sizing:border-box;border:3px solid transparent;transition:border-color .4s ease,box-shadow .4s ease}
 .achievement-img{width:256px;height:256px;max-width:100%;object-fit:contain;filter:grayscale(1);opacity:.55;transition:filter .6s ease,opacity .6s ease,transform .6s ease}
+.achievement-card.unlocked .achievement-img-wrap{border-color:#ffd700;box-shadow:0 0 16px rgba(255,215,0,.6),inset 0 0 12px rgba(255,215,0,.25)}
 .achievement-card.unlocked .achievement-img{filter:none;opacity:1}
 .achievement-card.newly .achievement-img{animation:unlock .6s ease}
 @keyframes unlock{0%{filter:grayscale(1);opacity:.35;transform:scale(.9)}60%{filter:none;opacity:1;transform:scale(1.08)}100%{transform:scale(1)}}
