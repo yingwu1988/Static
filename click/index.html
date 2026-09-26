@@ -154,7 +154,8 @@ const state = {
   achievementPage: 0,
   modal: null,
   interval: null,
-  lastDate: ""
+  lastDate: "",
+  recordFilters: {date:"",student:"",status:""}
 };
 
 function uid(prefix="id"){
@@ -425,9 +426,12 @@ function allTasksCompleted(username,date){
   return tasks.every(t=>{
     const a=getAttendance(username,date)[t.instanceId];
     if(!a?.completed)return false;
+    // 没有打卡时间但标记为已完成，视为按时完成（兼容旧数据/异常数据）
+    if(!a.checkinTime)return true;
     const dt=new Date(a.checkinTime);
-    return !Number.isNaN(dt.getTime()) && timeToMinutes(t.deadline)>=0 &&
-      (dt.getHours()*60+dt.getMinutes())<=timeToMinutes(t.deadline);
+    if(Number.isNaN(dt.getTime()))return true;
+    // 与 deadlinePassed 判断逻辑一致：打卡时间未超过截止时间即为按时
+    return !deadlinePassed(t,dt);
   });
 }
 
@@ -446,7 +450,8 @@ function syncAchievements(){
     for(const d of dates){
       if(d>today)continue;
       if(existingDates.has(d))continue;
-      if(!allTasksCompleted(username,d))continue;
+      const tasks=state.data.dailyTasks[d]||[];
+      if(!tasks.length)continue;
       if(unlocked.length>=ACHIEVEMENTS.length){
         existingDates.add(d);
         continue;
@@ -912,14 +917,18 @@ function renderAllRecords(){
     <div class="toolbar-right"><button class="primary" onclick="unlockAchievements()">成就达成</button><button class="secondary" onclick="openBackupMenu()">数据备份</button><button class="secondary" onclick="importBackup()">导入恢复</button></div></div>
     <div class="notice">【成就达成】手动检查所有学生的打卡完成情况，将符合条件的成就解锁发放给学生。</div>
     <div class="search-row">
-      <select id="recordDate" onchange="render()"><option value="">全部日期</option>${dates.map(d=>`<option value="${d}" ${d===today?"selected":""}>${d}</option>`).join("")}</select>
-      <select id="recordStudent" onchange="render()"><option value="">全部学生</option>${students.map(s=>`<option value="${escapeHtml(s.username)}">${escapeHtml(s.name)}（${escapeHtml(s.username)}）</option>`).join("")}</select>
-      <select id="recordStatus" onchange="render()"><option value="">全部状态</option><option value="completed">已完成</option><option value="pending">未完成</option></select>
+      <select id="recordDate" onchange="setRecordFilter('date',this.value)"><option value="">全部日期</option>${dates.map(d=>`<option value="${d}" ${d===state.recordFilters.date?"selected":""}>${d}</option>`).join("")}</select>
+      <select id="recordStudent" onchange="setRecordFilter('student',this.value)"><option value="">全部学生</option>${students.map(s=>`<option value="${escapeHtml(s.username)}" ${s.username===state.recordFilters.student?"selected":""}>${escapeHtml(s.name)}（${escapeHtml(s.username)}）</option>`).join("")}</select>
+      <select id="recordStatus" onchange="setRecordFilter('status',this.value)"><option value="">全部状态</option><option value="completed" ${state.recordFilters.status==="completed"?"selected":""}>已完成</option><option value="pending" ${state.recordFilters.status==="pending"?"selected":""}>未完成</option></select>
       <button class="secondary" onclick="clearRecordFilters()">清除筛选</button>
     </div>
     ${renderAllRecordTable(students)}`;
 }
-function getFilter(id){return document.getElementById(id)?.value||""}
+function setRecordFilter(key,value){
+  state.recordFilters[key]=value;
+  render();
+}
+function getFilter(id){return state.recordFilters[id.replace(/^record/,"").toLowerCase()]||""}
 function renderAllRecordTable(students){
   const dateFilter=getFilter("recordDate"),studentFilter=getFilter("recordStudent"),statusFilter=getFilter("recordStatus");
   const rows=[];
@@ -950,6 +959,7 @@ function renderAllRecordTable(students){
   </tbody></table></div>`;
 }
 function clearRecordFilters(){
+  state.recordFilters={date:"",student:"",status:""};
   state.page="records";render();
 }
 
