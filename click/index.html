@@ -376,21 +376,27 @@ function ensureDailyTasks(forceDate=null){
 }
 function unlockAchievements(){
   if(!requireAdmin())return;
+  const dateFilter=state.recordFilters.date;
+  const studentFilter=state.recordFilters.student;
   const before={};
   for(const account of Object.values(state.data.accounts)){
     if(account.role!=="student")continue;
+    if(studentFilter && account.username!==studentFilter)continue;
     before[account.username]=(state.data.achievements[account.username]||[]).length;
   }
-  syncAchievements();
+  syncAchievements({date:dateFilter,student:studentFilter});
   let total=0;
   for(const username of Object.keys(before)){
     const after=(state.data.achievements[username]||[]).length;
     total+=(after-before[username]);
   }
+  const scope=[];
+  if(dateFilter)scope.push("日期："+dateFilter);
+  if(studentFilter)scope.push("学生："+studentFilter);
   if(total>0){
-    toast(`成就解锁成功，共发放 ${total} 个成就`,"success");
+    toast(`成就解锁成功，共发放 ${total} 个（${scope.join(" / ")||"全部"}）`,"success");
   }else{
-    toast("暂无可解锁的成就","warning");
+    toast("暂无可解锁的成就（"+(scope.join(" / ")||"全部")+"）","warning");
   }
   render();
 }
@@ -435,11 +441,14 @@ function allTasksCompleted(username,date){
   });
 }
 
-function syncAchievements(){
+function syncAchievements(filter={}){
   let changed=false;
   const today=dateKey();
+  const filterDate=filter.date||"";
+  const filterStudent=filter.student||"";
   for(const account of Object.values(state.data.accounts)){
     if(account.role!=="student")continue;
+    if(filterStudent && account.username!==filterStudent)continue;
     const username=account.username;
     if(!Array.isArray(state.data.achievements[username]))
       state.data.achievements[username]=[];
@@ -449,6 +458,7 @@ function syncAchievements(){
     const dates=Object.keys(state.data.dailyTasks).sort();
     for(const d of dates){
       if(d>today)continue;
+      if(filterDate && d!==filterDate)continue;
       if(existingDates.has(d))continue;
       const tasks=state.data.dailyTasks[d]||[];
       if(!tasks.length)continue;
