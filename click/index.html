@@ -101,6 +101,35 @@ pre.json-preview{white-space:pre-wrap;word-break:break-all;background:#111827;co
   .achievement-card{border-radius:12px}.achievement-img{width:128px;height:128px}
   .modal{border-radius:16px}.modal-mask{padding:8px}
 }
+.pet-bubble{position:relative;background:#fff;border:1px solid #dde0e6;border-radius:12px;padding:10px 14px;margin-bottom:12px;text-align:center;font-size:15px;color:#444}
+.pet-bubble::after{content:"";position:absolute;left:50%;transform:translateX(-50%);bottom:-8px;border-width:8px 8px 0;border-style:solid;border-color:#fff transparent transparent}
+.pet-bubble::before{content:"";position:absolute;left:50%;transform:translateX(-50%);bottom:-10px;border-width:9px 9px 0;border-style:solid;border-color:#dde0e6 transparent transparent}
+.pet-page{max-width:560px;margin:0 auto}
+.pet-img-wrap{width:200px;height:200px;margin:0 auto 12px;border-radius:50%;overflow:hidden;border:3px solid #e0f2fe;background:linear-gradient(135deg,#e0f2fe,#bae6fd,#7dd3fc,#38bdf8);display:flex;align-items:center;justify-content:center}
+.pet-img-wrap.dead{filter:grayscale(1);opacity:.6}
+.pet-img-wrap.sick{border-color:#fbbf24}
+.pet-img-wrap img{width:100%;height:100%;object-fit:cover}
+.pet-name{font-size:20px;font-weight:700;text-align:center;cursor:pointer}
+.pet-name:hover{text-decoration:underline}
+.pet-status{text-align:center;margin:6px 0}
+.pet-bar{margin:8px 0}
+.pet-bar-label{display:flex;justify-content:space-between;font-size:13px;color:#667085;margin-bottom:2px}
+.pet-bar-track{height:10px;background:#e9edf3;border-radius:5px;overflow:hidden}
+.pet-bar-fill{height:100%;border-radius:5px;transition:width .3s}
+.pet-bar-fill.full{background:linear-gradient(90deg,#34d399,#10b981)}
+.pet-bar-fill.clean{background:linear-gradient(90deg,#60a5fa,#3b82f6)}
+.pet-bar-fill.intimacy{background:linear-gradient(90deg,#f472b6,#ec4899)}
+.pet-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
+.pet-adopt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pet-adopt-card{text-align:center;padding:12px;border-radius:12px;border:1px solid var(--border);background:#fff}
+.pet-adopt-card img{width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 8px}
+.pet-adopt-card.dead img{filter:grayscale(1);opacity:.6}
+.pet-shop-item{display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px}
+.pet-shop-item-info{flex:1}
+.pet-shop-item-price{font-weight:700;color:#b45309}
+.pet-config-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pet-config-grid .form-group{margin-bottom:0}
+@media(max-width:520px){.pet-adopt-grid{grid-template-columns:repeat(2,1fr)}.pet-config-grid{grid-template-columns:1fr}.pet-img-wrap{width:160px;height:160px}}
 </style>
 </head>
 <body>
@@ -155,6 +184,62 @@ const ACHIEVEMENTS = [
   ["ach31","31","https://yingwu1988.github.io/Static/click/img/31.png"]
 ].map(([id,name,image])=>({id,name,image}));
 
+const PET_ZODIAC = [
+  {id:"rat",name:"子鼠",img:"https://yingwu1988.github.io/Static/click/img/pet/1.png"},
+  {id:"ox",name:"丑牛",img:"https://yingwu1988.github.io/Static/click/img/pet/2.png"},
+  {id:"tiger",name:"寅虎",img:"https://yingwu1988.github.io/Static/click/img/pet/3.png"},
+  {id:"rabbit",name:"卯兔",img:"https://yingwu1988.github.io/Static/click/img/pet/4.png"},
+  {id:"dragon",name:"辰龙",img:"https://yingwu1988.github.io/Static/click/img/pet/5.png"},
+  {id:"snake",name:"巳蛇",img:"https://yingwu1988.github.io/Static/click/img/pet/6.png"},
+  {id:"horse",name:"午马",img:"https://yingwu1988.github.io/Static/click/img/pet/7.png"},
+  {id:"goat",name:"未羊",img:"https://yingwu1988.github.io/Static/click/img/pet/8.png"},
+  {id:"monkey",name:"申猴",img:"https://yingwu1988.github.io/Static/click/img/pet/9.png"},
+  {id:"rooster",name:"酉鸡",img:"https://yingwu1988.github.io/Static/click/img/pet/10.png"},
+  {id:"dog",name:"戌狗",img:"https://yingwu1988.github.io/Static/click/img/pet/11.png"},
+  {id:"pig",name:"亥猪",img:"https://yingwu1988.github.io/Static/click/img/pet/12.png"}
+];
+const PET_IMG_BASE="https://yingwu1988.github.io/Static/click/img/pet/";
+function petImg(id){const z=PET_ZODIAC.find(x=>x.id===id);return z?z.img:PET_IMG_BASE+"1.png"}
+function petName(id){const z=PET_ZODIAC.find(x=>x.id===id);return z?z.name:id}
+
+const PET_DIALOG={
+  healthy_high:["今天能陪着你真开心","和你在一起感觉特别幸福！","希望我们可以一直相伴~","谢谢你一直细心照顾我！","看到你我就很高兴啦。"],
+  healthy_mid:["今天过得平平淡淡。","一切都还算不错哦。","日子安安稳稳就挺好。","有空可以多来看看我。","希望今天一切顺利。"],
+  healthy_low:["感觉有点孤单......","你是不是很少来看我？","我不太熟悉你的样子。","要是能多陪陪我就好了。","我提不起什么兴致。"],
+  sick_pool:["呜呜，身体好难受","我浑身没有力气，好不舒服。","好想快点好起来。","请快用药剂帮帮我吧。","浑身酸痛，很难受。"],
+  dead_pool:["我已经离开了，还记得我们过去的时光吗。","感谢曾经陪伴的日子。","缘分到此，期待新的相遇。"]
+};
+function getPetRandomDialog(pet){
+  if(!pet||!pet.healthStatus)return"......";
+  let pool;
+  if(pet.healthStatus==="dead")pool=PET_DIALOG.dead_pool;
+  else if(pet.healthStatus==="sick")pool=PET_DIALOG.sick_pool;
+  else{
+    if(pet.intimacy>=70)pool=PET_DIALOG.healthy_high;
+    else if(pet.intimacy>=30)pool=PET_DIALOG.healthy_mid;
+    else pool=PET_DIALOG.healthy_low;
+  }
+  if(!Array.isArray(pool)||!pool.length)return"......";
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+function defaultPetConfig(){
+  return {
+    decayFull:0.028,decayClean:0.028,deltaMaxMin:43200,timeSliceMin:60,
+    warnThreshold:30,sickThreshold:20,
+    intimacyAddHealthy:0.01,intimacySubSick:0.03,sickToDeathHours:48,
+    itemFoodAdd:35,itemCleanerAdd:35,
+    priceMedicine:10,priceFood:3,priceCleaner:2,
+    autoCareEnable:true,autoCareFullMin:45,autoCareCleanMin:45
+  };
+}
+function defaultBackpack(){return[{itemId:"medicine",name:"药剂",count:0},{itemId:"food",name:"宠物粮",count:0},{itemId:"cleaner",name:"清洁剂",count:0}]}
+function defaultPet(){return{petId:"",petName:"",birthTimestamp:0,lastUpdate:0,healthStatus:"healthy",full:80,clean:80,intimacy:30,intimacyZeroTs:0}}
+
+let autoConsumeFoodCount=0;
+let autoConsumeCleanerCount=0;
+let petDialogCache="";
+
 const state = {
   data: null,
   session: null,
@@ -190,7 +275,8 @@ function defaultData(){
   return {
     version: APP_VERSION,
     settings: {
-      appName:"平板单机版打卡系统"
+      appName:"平板单机版打卡系统",
+      petConfig:defaultPetConfig()
     },
     accounts: {
       admin: {
@@ -199,7 +285,10 @@ function defaultData(){
       },
       student001: {
         username:"student001", name:"测试学生", role:"student", password:"123456",
-        mustChangePassword:false, createdAt:new Date().toISOString()
+        mustChangePassword:false, createdAt:new Date().toISOString(),
+        achievementPoint:0,totalCheckinComplete:0,
+        pet:defaultPet(),backpack:defaultBackpack(),
+        adoptedPetIds:[],deadPetIds:[]
       }
     },
     taskTemplates: [
@@ -240,7 +329,18 @@ function normalizeData(d){
   const base=defaultData();
   d.version=Number(d.version)||APP_VERSION;
   d.settings={...base.settings,...(d.settings||{})};
+  d.settings.petConfig={...defaultPetConfig(),...(d.settings.petConfig||{})};
   d.accounts=(d.accounts&&typeof d.accounts==="object")?d.accounts:base.accounts;
+  for(const u of Object.values(d.accounts)){
+    if(u.role==="student"){
+      u.achievementPoint=Number(u.achievementPoint)||0;
+      u.totalCheckinComplete=Number(u.totalCheckinComplete)||0;
+      u.adoptedPetIds=Array.isArray(u.adoptedPetIds)?u.adoptedPetIds:[];
+      u.deadPetIds=Array.isArray(u.deadPetIds)?u.deadPetIds:[];
+      u.backpack=Array.isArray(u.backpack)&&u.backpack.length===3?u.backpack:defaultBackpack();
+      u.pet=u.pet&&typeof u.pet==="object"?{...defaultPet(),...u.pet}:defaultPet();
+    }
+  }
   d.taskTemplates=Array.isArray(d.taskTemplates)?d.taskTemplates:[];
   d.dailyTasks=(d.dailyTasks&&typeof d.dailyTasks==="object")?d.dailyTasks:{};
   d.attendance=(d.attendance&&typeof d.attendance==="object")?d.attendance:{};
@@ -449,6 +549,378 @@ function allTasksCompleted(username,date){
   });
 }
 
+/* ========== 宠物模块核心函数 ========== */
+function getPetConfig(){return state.data.settings.petConfig}
+function getStudentPet(u){
+  const acc=state.data.accounts[u];
+  if(!acc||acc.role!=="student")return null;
+  return acc;
+}
+function getBackpackItem(u,itemId){
+  const s=getStudentPet(u);
+  if(!s)return null;
+  return s.backpack.find(x=>x.itemId===itemId);
+}
+
+function simulatePet(username){
+  const s=getStudentPet(username);
+  if(!s||!s.pet||!s.pet.petId||s.pet.healthStatus==="dead")return;
+  const cfg=getPetConfig();
+  const nowTs=Date.now();
+  if(s.pet.lastUpdate===0){s.pet.lastUpdate=nowTs;saveData();return}
+  if(nowTs<s.pet.lastUpdate){toast("检测到系统时间异常，本次不更新宠物状态","warning");return}
+  let totalDeltaMin=(nowTs-s.pet.lastUpdate)/60000;
+  totalDeltaMin=Math.min(totalDeltaMin,cfg.deltaMaxMin);
+  if(totalDeltaMin<=0){s.pet.lastUpdate=nowTs;saveData();return}
+
+  autoConsumeFoodCount=0;
+  autoConsumeCleanerCount=0;
+  const pet=s.pet;
+  let remainMin=totalDeltaMin;
+  let diedThisRun=false;
+
+  while(remainMin>0){
+    const stepMin=Math.min(remainMin,cfg.timeSliceMin);
+    pet.full-=stepMin*cfg.decayFull;
+    pet.clean-=stepMin*cfg.decayClean;
+
+    if(pet.healthStatus==="healthy")pet.intimacy+=stepMin*cfg.intimacyAddHealthy;
+    else if(pet.healthStatus==="sick")pet.intimacy-=stepMin*cfg.intimacySubSick;
+
+    pet.full=Math.max(0,Math.min(100,pet.full));
+    pet.clean=Math.max(0,Math.min(100,pet.clean));
+    pet.intimacy=Math.max(0,Math.min(100,pet.intimacy));
+
+    if(pet.healthStatus==="healthy"&&cfg.autoCareEnable){
+      const foodItem=s.backpack.find(x=>x.itemId==="food");
+      const cleanerItem=s.backpack.find(x=>x.itemId==="cleaner");
+      if(pet.full<cfg.autoCareFullMin&&foodItem&&foodItem.count>0){
+        foodItem.count-=1;
+        pet.full=Math.min(100,pet.full+cfg.itemFoodAdd);
+        autoConsumeFoodCount++;
+      }
+      if(pet.clean<cfg.autoCareCleanMin&&cleanerItem&&cleanerItem.count>0){
+        cleanerItem.count-=1;
+        pet.clean=Math.min(100,pet.clean+cfg.itemCleanerAdd);
+        autoConsumeCleanerCount++;
+      }
+    }
+
+    if(pet.full<=cfg.sickThreshold&&pet.clean<=cfg.sickThreshold){
+      if(pet.healthStatus==="healthy"){
+        pet.healthStatus="sick";
+        toast("宠物已经生病了，请使用药剂治疗！","warning");
+      }
+    }
+
+    if(pet.healthStatus==="sick"&&pet.intimacy<=0){
+      if(pet.intimacyZeroTs===0)pet.intimacyZeroTs=nowTs-(remainMin-stepMin)*60*1000;
+    }else{
+      pet.intimacyZeroTs=0;
+    }
+
+    if(pet.healthStatus==="sick"&&pet.intimacy<=0&&pet.intimacyZeroTs>0){
+      const passedHours=(nowTs-pet.intimacyZeroTs)/(1000*60*60);
+      if(passedHours>=cfg.sickToDeathHours){
+        pet.healthStatus="dead";
+        if(!s.deadPetIds.includes(pet.petId))s.deadPetIds.push(pet.petId);
+        toast("💔很遗憾，你的宠物已经离世，可以消耗10成就点重新领养该生肖。","warning");
+        diedThisRun=true;
+        break;
+      }
+    }
+    remainMin-=stepMin;
+  }
+
+  if(!diedThisRun&&(pet.full<=cfg.warnThreshold||pet.clean<=cfg.warnThreshold)&&pet.healthStatus!=="sick"){
+    toast("⚠️宠物状态变差，请留意，再不照顾很快会生病！","warning");
+  }
+
+  pet.lastUpdate=nowTs;
+  saveData();
+}
+
+function adoptPet(zodiacId){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s)return;
+  const isFirst=s.adoptedPetIds.length===0;
+  const wasDead=s.deadPetIds.includes(zodiacId);
+  const alreadyAlive=s.adoptedPetIds.includes(zodiacId)&&s.pet.healthStatus!=="dead"&&s.pet.petId===zodiacId;
+
+  if(alreadyAlive){toast("该生肖已经是你的当前宠物","info");return}
+
+  const isAdoptedAlive=s.adoptedPetIds.includes(zodiacId)&&s.pet.petId===zodiacId&&s.pet.healthStatus!=="dead";
+  if(isAdoptedAlive){
+    s.pet.petId=zodiacId;
+    s.pet.petName=petName(zodiacId);
+    saveData();toast("已切换为"+petName(zodiacId),"success");render();return;
+  }
+
+  if(!isFirst){
+    if(s.achievementPoint<10){toast("成就点不足，需要累计全勤打卡获取成就点","error");return}
+    s.achievementPoint-=10;
+  }
+
+  const nowTs=Date.now();
+  s.pet={petId:zodiacId,petName:petName(zodiacId),birthTimestamp:nowTs,lastUpdate:nowTs,
+    healthStatus:"healthy",full:80,clean:80,intimacy:30,intimacyZeroTs:0};
+  if(!s.adoptedPetIds.includes(zodiacId))s.adoptedPetIds.push(zodiacId);
+  saveData();
+  petDialogCache=getPetRandomDialog(s.pet);
+  toast(isFirst?"领养成功！":"领养成功！消耗10成就点","success");
+  playDing();
+  render();
+}
+
+function feedPet(){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s||!s.pet.petId||s.pet.healthStatus==="dead")return;
+  const item=getBackpackItem(u,"food");
+  if(!item||item.count<=0){toast("背包道具不足，可以前往宠物商店使用达成数量购买","error");return}
+  const cfg=getPetConfig();
+  item.count-=1;
+  s.pet.full=Math.min(100,s.pet.full+cfg.itemFoodAdd);
+  s.pet.lastUpdate=Date.now();
+  saveData();
+  petDialogCache=getPetRandomDialog(s.pet);
+  toast("喂食成功！","success");
+  playDing();
+  render();
+}
+
+function cleanPet(){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s||!s.pet.petId||s.pet.healthStatus==="dead")return;
+  const item=getBackpackItem(u,"cleaner");
+  if(!item||item.count<=0){toast("背包道具不足，可以前往宠物商店使用达成数量购买","error");return}
+  const cfg=getPetConfig();
+  item.count-=1;
+  s.pet.clean=Math.min(100,s.pet.clean+cfg.itemCleanerAdd);
+  s.pet.lastUpdate=Date.now();
+  saveData();
+  petDialogCache=getPetRandomDialog(s.pet);
+  toast("清洁完成！","success");
+  playDing();
+  render();
+}
+
+function healPet(){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s||!s.pet.petId||s.pet.healthStatus!=="sick")return;
+  const item=getBackpackItem(u,"medicine");
+  if(!item||item.count<=0){toast("背包道具不足，可以前往宠物商店使用达成数量购买","error");return}
+  item.count-=1;
+  s.pet.healthStatus="healthy";
+  s.pet.intimacyZeroTs=0;
+  s.pet.lastUpdate=Date.now();
+  saveData();
+  petDialogCache=getPetRandomDialog(s.pet);
+  toast("治疗成功！宠物恢复健康","success");
+  render();
+}
+
+function buyItem(itemId){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s)return;
+  const cfg=getPetConfig();
+  const priceMap={medicine:cfg.priceMedicine,food:cfg.priceFood,cleaner:cfg.priceCleaner};
+  const price=priceMap[itemId];
+  if(s.totalCheckinComplete<price){toast("达成数量不足，请多多完成打卡任务","error");return}
+  s.totalCheckinComplete-=price;
+  const item=s.backpack.find(x=>x.itemId===itemId);
+  if(item)item.count+=1;
+  saveData();
+  toast("购买成功！","success");
+  playDing();
+  render();
+}
+
+function renamePet(){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s||!s.pet.petId)return;
+  const name=document.getElementById("petNameInput").value.trim();
+  if(!name||name.length>12){toast("昵称需1-12个字符","error");return}
+  s.pet.petName=name;
+  saveData();closeModal();toast("昵称修改成功","success");render();
+}
+
+function openRenameModal(){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s||!s.pet.petId)return;
+  showModal("修改宠物昵称",
+    `<div class="form-group"><label>宠物昵称</label><input id="petNameInput" maxlength="12" value="${escapeHtml(s.pet.petName)}"></div>`,
+    `<button class="secondary" onclick="closeModal()">取消</button><button class="primary" onclick="renamePet()">保存</button>`);
+}
+
+function openPetShop(){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s)return;
+  const cfg=getPetConfig();
+  const items=[
+    {itemId:"food",name:"宠物粮",price:cfg.priceFood,desc:"吃饱 +"+cfg.itemFoodAdd},
+    {itemId:"cleaner",name:"清洁剂",price:cfg.priceCleaner,desc:"卫生 +"+cfg.itemCleanerAdd},
+    {itemId:"medicine",name:"药剂",price:cfg.priceMedicine,desc:"生病时使用，恢复健康"}
+  ];
+  showModal("宠物商店",
+    `<div class="small muted" style="margin-bottom:12px">当前达成数量：${s.totalCheckinComplete}</div>
+     ${items.map(it=>{
+       const bp=getBackpackItem(u,it.itemId);
+       return `<div class="pet-shop-item">
+         <div class="pet-shop-item-info"><b>${it.name}</b><div class="small muted">${it.desc}　背包：${bp?bp.count:0}</div></div>
+         <div style="text-align:right"><div class="pet-shop-item-price">${it.price} 达成</div>
+         <button class="primary" style="margin-top:4px;padding:4px 16px" onclick="buyItem('${it.itemId}')">购买</button></div>
+       </div>`;
+     }).join("")}`,
+    `<button class="secondary" onclick="closeModal()">关闭</button>`);
+}
+
+function openBackpack(){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s)return;
+  showModal("背包",
+    `<div class="grid grid-3">${s.backpack.map(it=>`<div class="card" style="text-align:center"><div class="muted">${escapeHtml(it.name)}</div><div class="stat-number">${it.count}</div></div>`).join("")}</div>`,
+    `<button class="primary" onclick="closeModal()">关闭</button>`);
+}
+
+function openPetConfig(){
+  if(!requireAdmin())return;
+  const cfg=getPetConfig();
+  const fields=[
+    ["decayFull","吃饱每分钟衰减"],["decayClean","卫生每分钟衰减"],
+    ["warnThreshold","濒临生病预警阈值"],["sickThreshold","生病判定阈值"],
+    ["intimacyAddHealthy","健康亲密度每分钟增加"],["intimacySubSick","生病亲密度每分钟扣减"],
+    ["sickToDeathHours","亲密度归零后死亡时长(小时)"],
+    ["itemFoodAdd","宠物粮恢复吃饱点数"],["itemCleanerAdd","清洁剂恢复卫生点数"],
+    ["priceMedicine","药剂售价(达成数量)"],["priceFood","宠物粮售价(达成数量)"],["priceCleaner","清洁剂售价(达成数量)"],
+    ["autoCareFullMin","自动照料-吃饱最低阈值"],["autoCareCleanMin","自动照料-卫生最低阈值"]
+  ];
+  showModal("宠物参数配置",
+    `<div class="pet-config-grid">${fields.map(([key,label])=>`
+      <div class="form-group"><label>${label}</label><input id="cfg_${key}" type="number" step="0.001" value="${cfg[key]}"></div>`).join("")}</div>
+     <div class="form-group"><label><input id="cfg_autoCareEnable" type="checkbox" ${cfg.autoCareEnable?"checked":""}> 开启自动照料总开关</label></div>
+     <div id="petCfgError" class="form-error"></div>`,
+    `<button class="secondary" onclick="closeModal()">取消</button><button class="primary" id="savePetCfgBtn">保存</button>`);
+  setTimeout(()=>{
+    document.getElementById("savePetCfgBtn").onclick=()=>{
+      const err=document.getElementById("petCfgError");
+      err.textContent="";
+      const newCfg={...cfg};
+      for(const [key] of fields){
+        const v=parseFloat(document.getElementById("cfg_"+key).value);
+        if(isNaN(v)||v<0){err.textContent="所有数值必须≥0";return}
+        newCfg[key]=v;
+      }
+      if(newCfg.sickThreshold>=newCfg.warnThreshold){err.textContent="生病阈值必须小于预警阈值";return}
+      newCfg.autoCareEnable=document.getElementById("cfg_autoCareEnable").checked;
+      state.data.settings.petConfig=newCfg;
+      saveData();closeModal();toast("宠物参数已保存，全局生效","success");render();
+    };
+  },0);
+}
+
+/* ========== 宠物渲染函数 ========== */
+function renderPetHome(){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s)return"";
+  simulatePet(u);
+  const pet=s.pet;
+  const cfg=getPetConfig();
+
+  if(!pet.petId){
+    return `<div class="toolbar"><div><h2>我的生肖宠物</h2><div class="muted">领养一只生肖宠物陪你一起打卡</div></div></div>
+      <div class="card center" style="padding:40px 20px">
+        <div style="font-size:48px;margin-bottom:16px">🐾</div>
+        <p class="muted" style="margin-bottom:20px">你还没有领养宠物，首次领养免费！</p>
+        <button class="primary" onclick="go('petadopt')">前往领养</button>
+      </div>`;
+  }
+
+  if(!petDialogCache)petDialogCache=getPetRandomDialog(pet);
+  const age=pet.birthTimestamp>0?Math.floor((Date.now()-pet.birthTimestamp)/(1000*60*60*24)):0;
+  const statusText=pet.healthStatus==="healthy"?"健康":pet.healthStatus==="sick"?"生病":"已死亡";
+  const statusColor=pet.healthStatus==="healthy"?"badge-success":pet.healthStatus==="sick"?"badge-warning":"badge-danger";
+  const isDead=pet.healthStatus==="dead";
+  const imgClass=isDead?"pet-img-wrap dead":pet.healthStatus==="sick"?"pet-img-wrap sick":"pet-img-wrap";
+
+  let actions=`<div class="pet-actions">
+    <button class="secondary" onclick="feedPet()" ${isDead?"disabled":""}>喂食</button>
+    <button class="secondary" onclick="cleanPet()" ${isDead?"disabled":""}>清洁</button>
+    ${pet.healthStatus==="sick"?`<button class="primary" onclick="healPet()">治疗</button>`:""}
+    <button class="secondary" onclick="go('petadopt')" ${isDead?"disabled":""}>领养/更换生肖</button>
+    <button class="secondary" onclick="openPetShop()">宠物商店</button>
+    <button class="secondary" onclick="openBackpack()">背包</button>
+  </div>`;
+  if(isDead)actions=`<div class="pet-actions"><button class="primary" onclick="go('petadopt')">前往重新领养</button></div>`;
+
+  let autoCareText=cfg.autoCareEnable
+    ?"✅已开启自动照料：打开页面会自动使用背包存货照顾宠物（生病时自动照料不生效）"
+    :"⚠️自动照料已关闭，请手动照顾宠物";
+
+  let consumeSummary="";
+  if(autoConsumeFoodCount>0||autoConsumeCleanerCount>0){
+    consumeSummary=`<div class="notice" style="margin-top:12px">📋本次打开页面，离线期间自动消耗：宠物粮 ${autoConsumeFoodCount}份，清洁剂 ${autoConsumeCleanerCount}份</div>`;
+  }
+
+  return `<div class="toolbar"><div><h2>我的生肖宠物</h2><div class="muted">成就点：${s.achievementPoint}　达成数量：${s.totalCheckinComplete}</div></div></div>
+    <div class="pet-page">
+      <div class="pet-bubble">${escapeHtml(petDialogCache)}</div>
+      <div class="${imgClass}" onclick="openRenameModal()">
+        <img src="${petImg(pet.petId)}" alt="${escapeHtml(pet.petName)}" onerror="this.src='data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgPlaceholder())}'">
+      </div>
+      <div class="pet-name" onclick="openRenameModal()">${escapeHtml(pet.petName||petName(pet.petId))} ✏️</div>
+      <div class="pet-status"><span class="badge ${statusColor}">${statusText}</span> <span class="muted">年龄 ${age} 天</span></div>
+      <div class="notice" style="margin-top:8px;text-align:center">🐾 小主人，快点去达成任务到商店换取道具让我快点长大吧</div>
+      <div class="card" style="margin-top:12px">
+        <div class="pet-bar"><div class="pet-bar-label"><span>吃饱</span><span>${Math.round(pet.full)}/100</span></div><div class="pet-bar-track"><div class="pet-bar-fill full" style="width:${pet.full}%"></div></div></div>
+        <div class="pet-bar"><div class="pet-bar-label"><span>卫生</span><span>${Math.round(pet.clean)}/100</span></div><div class="pet-bar-track"><div class="pet-bar-fill clean" style="width:${pet.clean}%"></div></div></div>
+        <div class="pet-bar"><div class="pet-bar-label"><span>亲密度</span><span>${Math.round(pet.intimacy)}/100</span></div><div class="pet-bar-track"><div class="pet-bar-fill intimacy" style="width:${pet.intimacy}%"></div></div></div>
+      </div>
+      <div class="small muted" style="text-align:center;margin-top:8px">${autoCareText}</div>
+      ${consumeSummary}
+      ${actions}
+    </div>`;
+}
+
+function renderPetAdopt(){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s)return"";
+  return `<div class="toolbar"><div><h2>领养生肖宠物</h2><div class="muted">成就点：${s.achievementPoint}　首次领养免费，之后每只10成就点</div></div>
+    <div class="toolbar-right"><button class="secondary" onclick="go('pet')">返回</button></div></div>
+    <div class="pet-adopt-grid">${PET_ZODIAC.map(z=>{
+      const adopted=s.adoptedPetIds.includes(z.id);
+      const wasDead=s.deadPetIds.includes(z.id);
+      const isCurrent=s.pet.petId===z.id&&s.pet.healthStatus!=="dead";
+      let btn="",cls="",hint="";
+      if(isCurrent){btn=`<button class="secondary" disabled>当前宠物</button>`;cls=""}
+      else if(adopted&&s.pet.petId===z.id&&s.pet.healthStatus==="dead"){cls="dead";btn=`<button class="primary" onclick="adoptPet('${z.id}')">重新领养</button>`;hint="该生肖曾经死亡，重新领养消耗10成就点"}
+      else if(adopted&&s.pet.healthStatus!=="dead"&&s.adoptedPetIds.includes(z.id)){btn=`<button class="secondary" onclick="adoptPet('${z.id}')">切换</button>`;hint="已领养，免费切换"}
+      else if(wasDead){cls="dead";btn=`<button class="${s.achievementPoint>=10?"primary":"secondary"}" ${s.achievementPoint>=10?"":"disabled"} onclick="adoptPet('${z.id}')">重新领养</button>`;hint="该生肖曾经死亡，重新领养消耗10成就点"}
+      else if(adopted){btn=`<button class="secondary" onclick="adoptPet('${z.id}')">切换</button>`;hint="已领养，免费切换"}
+      else{
+        const isFirst=s.adoptedPetIds.length===0;
+        if(isFirst){btn=`<button class="primary" onclick="adoptPet('${z.id}')">领养</button>`;hint="首次领养免费"}
+        else{btn=`<button class="${s.achievementPoint>=10?"primary":"secondary"}" ${s.achievementPoint>=10?"":"disabled"} onclick="adoptPet('${z.id}')">领养</button>`;hint="消耗10成就点"}
+      }
+      return `<div class="pet-adopt-card ${cls}">
+        <img src="${z.img}" alt="${z.name}" onerror="this.src='data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgPlaceholder())}'">
+        <div><b>${z.name}</b></div>
+        <div class="small muted" style="margin:4px 0">${hint}</div>
+        ${btn}
+      </div>`;
+    }).join("")}</div>`;
+}
+
 function syncAchievements(filter={}){
   let changed=false;
   const today=dateKey();
@@ -484,6 +956,9 @@ function syncAchievements(filter={}){
       });
       existingDates.add(d);
       changed=true;
+      if(allTasksCompleted(username,d)){
+        account.achievementPoint=(account.achievementPoint||0)+1;
+      }
     }
   }
   if(changed)saveData();
@@ -509,6 +984,12 @@ function validateBackupData(obj){
   for(const u of users){
     if(!u.username || !["admin","student"].includes(u.role) || typeof u.password!=="string")
       return "账号数据格式错误";
+    if(u.role==="student"){
+      if(typeof u.achievementPoint!=="number"||typeof u.totalCheckinComplete!=="number")return "宠物货币数据格式错误";
+      if(!Array.isArray(u.adoptedPetIds)||!Array.isArray(u.deadPetIds))return "宠物领养数据格式错误";
+      if(!Array.isArray(u.backpack))return "背包数据格式错误";
+      if(!u.pet||typeof u.pet!=="object")return "宠物数据格式错误";
+    }
   }
   return "";
 }
@@ -706,13 +1187,16 @@ function renderShell(){
        <button class="${state.page==="records"?"active":""}" onclick="go('records')">全员打卡</button>`
     : `<button class="${state.page==="home"?"active":""}" onclick="go('home')">今日打卡</button>
        <button class="${state.page==="records"?"active":""}" onclick="go('records')">我的记录</button>
-       <button class="${state.page==="achievements"?"active":""}" onclick="go('achievements')">成就墙</button>`;
+       <button class="${state.page==="achievements"?"active":""}" onclick="go('achievements')">成就墙</button>
+       <button class="${state.page==="pet"||state.page==="petadopt"?"active":""}" onclick="go('pet')">我的生肖宠物</button>`;
   let content="";
   if(state.page==="home")content=isAdmin()?renderAdminHome():renderStudentHome();
   else if(state.page==="tasks"&&isAdmin())content=renderTaskManagement();
   else if(state.page==="students"&&isAdmin())content=renderStudentManagement();
   else if(state.page==="records")content=isAdmin()?renderAllRecords():renderStudentRecords();
   else if(state.page==="achievements"&&isStudent())content=renderAchievements();
+  else if(state.page==="pet"&&isStudent())content=renderPetHome();
+  else if(state.page==="petadopt"&&isStudent())content=renderPetAdopt();
   else {state.page="home";content=isAdmin()?renderAdminHome():renderStudentHome();}
   return `<div class="app">
     <header class="header">
@@ -734,6 +1218,8 @@ function go(page){
   if(page==="tasks"&&!isAdmin()){toast("无访问权限","error");return}
   if(page==="students"&&!isAdmin()){toast("无访问权限","error");return}
   if(page==="achievements"&&!isStudent()){toast("无访问权限","error");return}
+  if((page==="pet"||page==="petadopt")&&!isStudent()){toast("无访问权限","error");return}
+  if(page==="pet"||page==="petadopt"){petDialogCache="";autoConsumeFoodCount=0;autoConsumeCleanerCount=0}
   state.page=page;render();
 }
 
@@ -744,7 +1230,7 @@ function renderAdminHome(){
   const completed=students.reduce((n,s)=>n+todayTasks.filter(t=>isTaskCompleted(s.username,dateKey(),t.instanceId)).length,0);
   const total=students.length*todayTasks.length;
   return `<div class="toolbar"><div><h2>管理员首页</h2><div class="muted">今天是 ${dateKey()}，${todayAfterOpen()?"今日任务已开放":"每日05:00后生成今日任务"}</div></div>
-    <div class="toolbar-right"><button class="primary" onclick="go('records')">查看全员打卡</button><button class="secondary" onclick="openBackupMenu()">数据备份恢复</button></div></div>
+    <div class="toolbar-right"><button class="primary" onclick="go('records')">查看全员打卡</button><button class="secondary" onclick="openPetConfig()">宠物参数配置</button><button class="secondary" onclick="openBackupMenu()">数据备份恢复</button></div></div>
     <div class="kpi">
       <div class="card"><div class="muted">学生人数</div><div class="stat-number">${students.length}</div></div>
       <div class="card"><div class="muted">启用任务</div><div class="stat-number">${tasks.length}</div></div>
@@ -780,7 +1266,10 @@ function renderStudentHome(){
   const completed=tasks.filter(t=>isTaskCompleted(u.username,dateKey(),t.instanceId)).length;
   const percent=tasks.length?Math.round(completed/tasks.length*100):0;
   return `<div class="toolbar"><div><h2>今日打卡</h2><div class="muted">${dateKey()} · 当前时间 ${timeKey()}</div></div>
-    <div class="toolbar-right"><button class="secondary" onclick="go('achievements')">我的成就 ${ach.length}</button></div></div>
+    <div class="toolbar-right">
+      ${u.pet&&u.pet.petId?`<button class="secondary" onclick="go('pet')">🐾 ${escapeHtml(u.pet.petName||petName(u.pet.petId))} ${u.pet.healthStatus==="sick"?"😷":""}${u.pet.healthStatus==="dead"?"💔":""}</button>`:""}
+      <button class="secondary" onclick="go('achievements')">我的成就 ${ach.length}</button>
+    </div></div>
     ${!todayAfterOpen()?`<div class="notice">今日打卡任务尚未开放，05:00后更新。</div>`:""}
     ${todayAfterOpen()&&!tasks.length?`<div class="warning-box">暂无打卡任务，请等待管理员启用任务。</div>`:""}
     ${tasks.length?`<div class="card" style="margin-bottom:16px"><div class="stat"><div><b>今日完成进度</b><div class="small muted">${completed}/${tasks.length} 个任务</div></div><b>${percent}%</b></div><div class="progress" style="margin-top:10px"><span style="width:${percent}%"></span></div></div>`:""}
@@ -815,6 +1304,8 @@ function checkin(instanceId){
   }
   const now=new Date();
   setAttendance(state.session.username,dateKey(),instanceId,{completed:true,checkinTime:now.toISOString()});
+  const acc=state.data.accounts[state.session.username];
+  if(acc&&acc.role==="student")acc.totalCheckinComplete=(acc.totalCheckinComplete||0)+1;
   saveData();
   playDing();
   toast("打卡成功","success");
@@ -1096,11 +1587,21 @@ function tick(){
 document.addEventListener("visibilitychange",()=>{
   if(!document.hidden){
     ensureDailyTaskData();
+    if(isStudent()&&(state.page==="pet"||state.page==="petadopt")){
+      petDialogCache="";
+      autoConsumeFoodCount=0;
+      autoConsumeCleanerCount=0;
+    }
     if(!state.modal)render();
   }
 });
 window.addEventListener("pageshow",()=>{
   ensureDailyTaskData();
+  if(isStudent()&&(state.page==="pet"||state.page==="petadopt")){
+    petDialogCache="";
+    autoConsumeFoodCount=0;
+    autoConsumeCleanerCount=0;
+  }
   if(!state.modal)render();
 });
 
