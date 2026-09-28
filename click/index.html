@@ -1375,13 +1375,14 @@ function deleteTask(id){
 
 function renderStudentManagement(){
   const list=Object.values(state.data.accounts).filter(x=>x.role==="student");
-  return `<div class="toolbar"><div><h2>学生账号管理</h2><div class="muted">管理员可创建学生账号、重置学生密码。</div></div>
+  return `<div class="toolbar"><div><h2>学生账号管理</h2><div class="muted">管理员可创建学生账号、重置密码、初始化学生数据。</div></div>
     <button class="primary" onclick="openStudentModal()">＋ 新建学生</button></div>
-    <div class="table-wrap"><table><thead><tr><th>账号</th><th>姓名</th><th>创建时间</th><th>密码状态</th><th>操作</th></tr></thead><tbody>
+    <div class="table-wrap"><table><thead><tr><th>账号</th><th>姓名</th><th>创建时间</th><th>密码状态</th><th>宠物/成就</th><th>操作</th></tr></thead><tbody>
     ${list.length?list.map(s=>`<tr><td><b>${escapeHtml(s.username)}</b></td><td>${escapeHtml(s.name)}</td><td>${formatDateTime(s.createdAt)}</td>
       <td>${s.mustChangePassword?'<span class="badge badge-warning">首次登录需改密</span>':'<span class="badge badge-success">正常</span>'}</td>
-      <td><button class="secondary" onclick="resetStudentPassword('${escapeHtml(s.username)}')">重置密码</button></td></tr>`).join("")
-    :`<tr><td colspan="5"><div class="empty">暂无学生账号</div></td></tr>`}
+      <td><span class="small muted">成就点:${s.achievementPoint||0} 达成:${s.totalCheckinComplete||0} 宠物:${s.pet&&s.pet.petId?petName(s.pet.petId):"未领养"}</span></td>
+      <td><div class="toolbar-left"><button class="secondary" onclick="resetStudentPassword('${escapeHtml(s.username)}')">重置密码</button><button class="danger" onclick="initStudent('${escapeHtml(s.username)}')">初始化</button></div></td></tr>`).join("")
+    :`<tr><td colspan="6"><div class="empty">暂无学生账号</div></td></tr>`}
     </tbody></table></div>`;
 }
 function openStudentModal(){
@@ -1416,6 +1417,30 @@ function resetStudentPassword(username){
       `<div class="notice">学生下次登录必须修改密码。</div><div style="font-size:20px;text-align:center;font-weight:800;padding:12px">123456</div><div class="small muted center">此密码仅本次展示，请及时告知学生。</div>`,
       `<button class="primary" onclick="closeModal()">关闭</button>`);
   });
+}
+
+function initStudent(username){
+  const s=state.data.accounts[username];
+  if(!s||s.role!=="student")return;
+  confirmModal("初始化学生数据",
+    `确定要初始化"${s.name}（${username}）"的所有数据吗？\n\n将清除以下内容：\n• 宠物（含已领养、已死亡记录）\n• 背包道具\n• 成就点、达成数量\n• 所有打卡记录\n• 已解锁成就\n\n此操作不可撤销！`,
+    ()=>{
+      s.pet=defaultPet();
+      s.backpack=defaultBackpack();
+      s.adoptedPetIds=[];
+      s.deadPetIds=[];
+      s.achievementPoint=0;
+      s.totalCheckinComplete=0;
+      if(state.data.attendance&&state.data.attendance[username]){
+        delete state.data.attendance[username];
+      }
+      if(state.data.achievements&&state.data.achievements[username]){
+        delete state.data.achievements[username];
+      }
+      saveData();
+      toast(s.name+" 已初始化","success");
+      render();
+    });
 }
 
 function renderAllRecords(){
