@@ -230,11 +230,12 @@ function defaultPetConfig(){
     intimacyAddHealthy:0.01,intimacySubSick:0.03,sickToDeathHours:48,
     itemFoodAdd:35,itemCleanerAdd:35,
     priceMedicine:10,priceFood:3,priceCleaner:2,
-    autoCareEnable:true,autoCareFullMin:45,autoCareCleanMin:45
+    autoCareEnable:true,autoCareFullMin:45,autoCareCleanMin:45,
+    missFullDeduct:1,missCleanDeduct:1
   };
 }
 function defaultBackpack(){return[{itemId:"medicine",name:"药剂",count:0},{itemId:"food",name:"宠物粮",count:0},{itemId:"cleaner",name:"清洁剂",count:0}]}
-function defaultPet(){return{petId:"",petName:"",birthTimestamp:0,lastUpdate:0,healthStatus:"healthy",full:80,clean:80,intimacy:30,intimacyZeroTs:0}}
+function defaultPet(){return{petId:"",petName:"",birthTimestamp:0,lastUpdate:0,healthStatus:"healthy",full:80,clean:80,intimacy:30,intimacyZeroTs:0,missDeductIds:[]}}
 function addPointLog(type,amount,desc){
   const u=state.session.username;
   const s=getStudentPet(u);
@@ -249,6 +250,34 @@ function addItemLog(username,itemId,itemName,amount,desc){
   if(!Array.isArray(s.itemLogs))s.itemLogs=[];
   s.itemLogs.unshift({id:"il_"+Date.now()+"_"+Math.random().toString(36).slice(2,6),itemId,itemName,amount,desc,timestamp:Date.now()});
   if(s.itemLogs.length>300)s.itemLogs.length=300;
+}
+function applyMissTaskDeduction(username){
+  const s=getStudentPet(username);
+  if(!s||!s.pet||!s.pet.petId||s.pet.healthStatus==="dead")return 0;
+  const today=dateKey();
+  const tasks=getTodayTasks();
+  if(!tasks.length)return 0;
+  if(!Array.isArray(s.pet.missDeductIds))s.pet.missDeductIds=[];
+  const deducted=new Set(s.pet.missDeductIds);
+  const nowTs=new Date();
+  let missCount=0;
+  for(const t of tasks){
+    if(deducted.has(t.instanceId))continue;
+    if(!isTaskCompleted(username,today,t.instanceId)&&deadlinePassed(t,nowTs)){
+      missCount++;
+      s.pet.missDeductIds.push(t.instanceId);
+    }
+  }
+  if(missCount<=0)return 0;
+  const cfg=getPetConfig();
+  const fullDeduct=missCount*cfg.missFullDeduct;
+  const cleanDeduct=missCount*cfg.missCleanDeduct;
+  s.pet.full=Math.max(0,s.pet.full-fullDeduct);
+  s.pet.clean=Math.max(0,s.pet.clean-cleanDeduct);
+  s.pet.lastUpdate=Date.now();
+  addItemLog(username,"food","宠物粮",-fullDeduct,"未完成任务扣除("+missCount+"个)");
+  addItemLog(username,"cleaner","清洁剂",-cleanDeduct,"未完成任务扣除("+missCount+"个)");
+  return missCount;
 }
 
 let autoConsumeFoodCount=0;
@@ -883,7 +912,8 @@ function openPetConfig(){
     ["sickToDeathHours","亲密度归零后死亡时长(小时)"],
     ["itemFoodAdd","宠物粮恢复吃饱点数"],["itemCleanerAdd","清洁剂恢复卫生点数"],
     ["priceMedicine","药剂售价(达成数量)"],["priceFood","宠物粮售价(达成数量)"],["priceCleaner","清洁剂售价(达成数量)"],
-    ["autoCareFullMin","自动照料-吃饱最低阈值"],["autoCareCleanMin","自动照料-卫生最低阈值"]
+    ["autoCareFullMin","自动照料-吃饱最低阈值"],["autoCareCleanMin","自动照料-卫生最低阈值"],
+    ["missFullDeduct","未完成任务-每个扣吃饱点数"],["missCleanDeduct","未完成任务-每个扣清洁点数"]
   ];
   showModal("宠物参数配置",
     `<div class="pet-config-grid">${fields.map(([key,label])=>`
@@ -1305,7 +1335,10 @@ function go(page){
   if((page==="pet"||page==="petadopt")&&!isStudent()){toast("无访问权限","error");return}
   if(page==="pet"||page==="petadopt"){
     petDialogCache="";autoConsumeFoodCount=0;autoConsumeCleanerCount=0;
-    if(isStudent())simulatePet(state.session.username);
+    if(isStudent()){
+      simulatePet(state.session.username);
+      applyMissTaskDeduction(state.session.username);
+    }
   }
   state.page=page;render();
 }
