@@ -235,6 +235,21 @@ function defaultPetConfig(){
 }
 function defaultBackpack(){return[{itemId:"medicine",name:"药剂",count:0},{itemId:"food",name:"宠物粮",count:0},{itemId:"cleaner",name:"清洁剂",count:0}]}
 function defaultPet(){return{petId:"",petName:"",birthTimestamp:0,lastUpdate:0,healthStatus:"healthy",full:80,clean:80,intimacy:30,intimacyZeroTs:0}}
+function addPointLog(type,amount,desc){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s)return;
+  if(!Array.isArray(s.pointLogs))s.pointLogs=[];
+  s.pointLogs.unshift({id:"pl_"+Date.now()+"_"+Math.random().toString(36).slice(2,6),type,amount,desc,timestamp:Date.now()});
+  if(s.pointLogs.length>200)s.pointLogs.length=200;
+}
+function addItemLog(username,itemId,itemName,amount,desc){
+  const s=getStudentPet(username);
+  if(!s)return;
+  if(!Array.isArray(s.itemLogs))s.itemLogs=[];
+  s.itemLogs.unshift({id:"il_"+Date.now()+"_"+Math.random().toString(36).slice(2,6),itemId,itemName,amount,desc,timestamp:Date.now()});
+  if(s.itemLogs.length>300)s.itemLogs.length=300;
+}
 
 let autoConsumeFoodCount=0;
 let autoConsumeCleanerCount=0;
@@ -288,7 +303,7 @@ function defaultData(){
         mustChangePassword:false, createdAt:new Date().toISOString(),
         achievementPoint:0,totalCheckinComplete:0,
         pet:defaultPet(),backpack:defaultBackpack(),
-        adoptedPetIds:[],deadPetIds:[]
+        adoptedPetIds:[],deadPetIds:[],pointLogs:[],itemLogs:[]
       }
     },
     taskTemplates: [
@@ -337,6 +352,8 @@ function normalizeData(d){
       u.totalCheckinComplete=Number(u.totalCheckinComplete)||0;
       u.adoptedPetIds=Array.isArray(u.adoptedPetIds)?u.adoptedPetIds:[];
       u.deadPetIds=Array.isArray(u.deadPetIds)?u.deadPetIds:[];
+      u.pointLogs=Array.isArray(u.pointLogs)?u.pointLogs:[];
+      u.itemLogs=Array.isArray(u.itemLogs)?u.itemLogs:[];
       u.backpack=Array.isArray(u.backpack)&&u.backpack.length===3?u.backpack:defaultBackpack();
       u.pet=u.pet&&typeof u.pet==="object"?{...defaultPet(),...u.pet}:defaultPet();
     }
@@ -598,11 +615,13 @@ function simulatePet(username){
         foodItem.count-=1;
         pet.full=Math.min(100,pet.full+cfg.itemFoodAdd);
         autoConsumeFoodCount++;
+        addItemLog(username,"food","宠物粮",-1,"自动喂食");
       }
       if(pet.clean<cfg.autoCareCleanMin&&cleanerItem&&cleanerItem.count>0){
         cleanerItem.count-=1;
         pet.clean=Math.min(100,pet.clean+cfg.itemCleanerAdd);
         autoConsumeCleanerCount++;
+        addItemLog(username,"cleaner","清洁剂",-1,"自动清洁");
       }
     }
 
@@ -683,6 +702,7 @@ function feedPet(){
   item.count-=1;
   s.pet.full=Math.min(100,s.pet.full+cfg.itemFoodAdd);
   s.pet.lastUpdate=Date.now();
+  addItemLog(u,"food","宠物粮",-1,"喂食宠物");
   saveData();
   petDialogCache=getPetRandomDialog(s.pet);
   toast("喂食成功！","success");
@@ -700,6 +720,7 @@ function cleanPet(){
   item.count-=1;
   s.pet.clean=Math.min(100,s.pet.clean+cfg.itemCleanerAdd);
   s.pet.lastUpdate=Date.now();
+  addItemLog(u,"cleaner","清洁剂",-1,"清洁宠物");
   saveData();
   petDialogCache=getPetRandomDialog(s.pet);
   toast("清洁完成！","success");
@@ -717,6 +738,7 @@ function healPet(){
   s.pet.healthStatus="healthy";
   s.pet.intimacyZeroTs=0;
   s.pet.lastUpdate=Date.now();
+  addItemLog(u,"medicine","药剂",-1,"治疗宠物");
   saveData();
   petDialogCache=getPetRandomDialog(s.pet);
   toast("治疗成功！宠物恢复健康","success");
@@ -734,10 +756,12 @@ function buyItem(itemId){
   s.totalCheckinComplete-=price;
   const item=s.backpack.find(x=>x.itemId===itemId);
   if(item)item.count+=1;
+  addPointLog("buy_"+itemId, -price, "购买"+item.name);
+  addItemLog(u,itemId,item.name,1,"商店购买");
   saveData();
   toast("购买成功！","success");
   playDing();
-  render();
+  refreshPetShop();
 }
 
 function renamePet(){
@@ -769,8 +793,7 @@ function openPetShop(){
     {itemId:"cleaner",name:"清洁剂",price:cfg.priceCleaner,desc:"卫生 +"+cfg.itemCleanerAdd},
     {itemId:"medicine",name:"药剂",price:cfg.priceMedicine,desc:"生病时使用，恢复健康"}
   ];
-  showModal("宠物商店",
-    `<div class="small muted" style="margin-bottom:12px">当前达成数量：${s.totalCheckinComplete}</div>
+  const html=`<div class="small muted" style="margin-bottom:12px">当前达成数量：${s.totalCheckinComplete}</div>
      ${items.map(it=>{
        const bp=getBackpackItem(u,it.itemId);
        return `<div class="pet-shop-item">
@@ -778,16 +801,75 @@ function openPetShop(){
          <div style="text-align:right"><div class="pet-shop-item-price">${it.price} 达成</div>
          <button class="primary" style="margin-top:4px;padding:4px 16px" onclick="buyItem('${it.itemId}')">购买</button></div>
        </div>`;
-     }).join("")}`,
-    `<button class="secondary" onclick="closeModal()">关闭</button>`);
+     }).join("")}`;
+  showModal("宠物商店",html,`<button class="secondary" onclick="closeModal()">关闭</button>`);
+}
+function refreshPetShop(){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s)return;
+  const cfg=getPetConfig();
+  const items=[
+    {itemId:"food",name:"宠物粮",price:cfg.priceFood,desc:"吃饱 +"+cfg.itemFoodAdd},
+    {itemId:"cleaner",name:"清洁剂",price:cfg.priceCleaner,desc:"卫生 +"+cfg.itemCleanerAdd},
+    {itemId:"medicine",name:"药剂",price:cfg.priceMedicine,desc:"生病时使用，恢复健康"}
+  ];
+  const body=document.getElementById("modalBody");
+  if(!body)return;
+  body.innerHTML=`<div class="small muted" style="margin-bottom:12px">当前达成数量：${s.totalCheckinComplete}</div>
+     ${items.map(it=>{
+       const bp=getBackpackItem(u,it.itemId);
+       return `<div class="pet-shop-item">
+         <div class="pet-shop-item-info"><b>${it.name}</b><div class="small muted">${it.desc}　背包：${bp?bp.count:0}</div></div>
+         <div style="text-align:right"><div class="pet-shop-item-price">${it.price} 达成</div>
+         <button class="primary" style="margin-top:4px;padding:4px 16px" onclick="buyItem('${it.itemId}')">购买</button></div>
+       </div>`;
+     }).join("")}`;
 }
 
 function openBackpack(){
   const u=state.session.username;
   const s=getStudentPet(u);
   if(!s)return;
-  showModal("背包",
-    `<div class="grid grid-3">${s.backpack.map(it=>`<div class="card" style="text-align:center"><div class="muted">${escapeHtml(it.name)}</div><div class="stat-number">${it.count}</div></div>`).join("")}</div>`,
+  const html=`<div class="grid grid-3">${s.backpack.map(it=>`<div class="card" style="text-align:center">
+    <div class="muted">${escapeHtml(it.name)}</div>
+    <div class="stat-number">${it.count}</div>
+    <button style="margin-top:8px;padding:6px 18px;font-size:13px;font-weight:600;color:#4f7cff;background:#fff;border:1px solid #4f7cff;border-radius:12px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='#eef3ff'" onmouseout="this.style.background='#fff'" onclick="openItemLog('${it.itemId}','${escapeHtml(it.name)}')">明细</button>
+  </div>`).join("")}</div>`;
+  showModal("背包",html,`<button class="primary" onclick="closeModal()">关闭</button>`);
+}
+function openItemLog(itemId,itemName){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s)return;
+  const logs=(s.itemLogs||[]).filter(l=>l.itemId===itemId).slice(0,50);
+  const html=logs.length?logs.map(l=>{
+    const isPlus=l.amount>0;
+    const time=new Date(l.timestamp);
+    const timeStr=`${time.getFullYear()}-${String(time.getMonth()+1).padStart(2,"0")}-${String(time.getDate()).padStart(2,"0")} ${String(time.getHours()).padStart(2,"0")}:${String(time.getMinutes()).padStart(2,"0")}`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div><div>${escapeHtml(l.desc)}</div><div class="small muted">${timeStr}</div></div>
+      <div style="font-weight:700;color:${isPlus?"#059669":"#dc2626"}">${isPlus?"+":""}${l.amount}</div>
+    </div>`;
+  }).join(""):`<div class="empty">暂无记录</div>`;
+  showModal(itemName+" - 增减明细",`<div style="max-height:400px;overflow-y:auto">${html}</div>`,
+    `<button class="secondary" onclick="openBackpack()">返回</button>`);
+}
+function openPointLog(){
+  const u=state.session.username;
+  const s=getStudentPet(u);
+  if(!s)return;
+  const logs=s.pointLogs||[];
+  const html=logs.length?logs.map(l=>{
+    const isPlus=l.amount>0;
+    const time=new Date(l.timestamp);
+    const timeStr=`${time.getFullYear()}-${String(time.getMonth()+1).padStart(2,"0")}-${String(time.getDate()).padStart(2,"0")} ${String(time.getHours()).padStart(2,"0")}:${String(time.getMinutes()).padStart(2,"0")}`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div><div>${escapeHtml(l.desc)}</div><div class="small muted">${timeStr}</div></div>
+      <div style="font-weight:700;color:${isPlus?"#059669":"#dc2626"}">${isPlus?"+":""}${l.amount}</div>
+    </div>`;
+  }).join(""):`<div class="empty">暂无记录</div>`;
+  showModal("达成数量记录",`<div style="max-height:400px;overflow-y:auto">${html}</div>`,
     `<button class="primary" onclick="closeModal()">关闭</button>`);
 }
 
@@ -832,7 +914,6 @@ function renderPetHome(){
   const u=state.session.username;
   const s=getStudentPet(u);
   if(!s)return"";
-  simulatePet(u);
   const pet=s.pet;
   const cfg=getPetConfig();
 
@@ -871,7 +952,8 @@ function renderPetHome(){
     consumeSummary=`<div class="notice" style="margin-top:12px">📋本次打开页面，离线期间自动消耗：宠物粮 ${autoConsumeFoodCount}份，清洁剂 ${autoConsumeCleanerCount}份</div>`;
   }
 
-  return `<div class="toolbar"><div><h2>我的生肖宠物</h2><div class="muted">成就点：${s.achievementPoint}　达成数量：${s.totalCheckinComplete}</div></div></div>
+  return `<div class="toolbar"><div><h2>我的生肖宠物</h2><div class="muted">成就点：${s.achievementPoint}　达成数量：${s.totalCheckinComplete}</div></div>
+    <div class="toolbar-right"><button class="secondary" onclick="openPointLog()">达成记录</button></div></div>
     <div class="pet-page">
       <div class="pet-bubble">${escapeHtml(petDialogCache)}</div>
       <div class="${imgClass}" onclick="openRenameModal()">
@@ -987,6 +1069,8 @@ function validateBackupData(obj){
     if(u.role==="student"){
       if(typeof u.achievementPoint!=="number"||typeof u.totalCheckinComplete!=="number")return "宠物货币数据格式错误";
       if(!Array.isArray(u.adoptedPetIds)||!Array.isArray(u.deadPetIds))return "宠物领养数据格式错误";
+      if(!Array.isArray(u.pointLogs))return "达成记录数据格式错误";
+      if(!Array.isArray(u.itemLogs))return "物品记录数据格式错误";
       if(!Array.isArray(u.backpack))return "背包数据格式错误";
       if(!u.pet||typeof u.pet!=="object")return "宠物数据格式错误";
     }
@@ -1219,7 +1303,10 @@ function go(page){
   if(page==="students"&&!isAdmin()){toast("无访问权限","error");return}
   if(page==="achievements"&&!isStudent()){toast("无访问权限","error");return}
   if((page==="pet"||page==="petadopt")&&!isStudent()){toast("无访问权限","error");return}
-  if(page==="pet"||page==="petadopt"){petDialogCache="";autoConsumeFoodCount=0;autoConsumeCleanerCount=0}
+  if(page==="pet"||page==="petadopt"){
+    petDialogCache="";autoConsumeFoodCount=0;autoConsumeCleanerCount=0;
+    if(isStudent())simulatePet(state.session.username);
+  }
   state.page=page;render();
 }
 
@@ -1305,7 +1392,10 @@ function checkin(instanceId){
   const now=new Date();
   setAttendance(state.session.username,dateKey(),instanceId,{completed:true,checkinTime:now.toISOString()});
   const acc=state.data.accounts[state.session.username];
-  if(acc&&acc.role==="student")acc.totalCheckinComplete=(acc.totalCheckinComplete||0)+1;
+  if(acc&&acc.role==="student"){
+    acc.totalCheckinComplete=(acc.totalCheckinComplete||0)+1;
+    addPointLog("checkin", 1, "完成打卡任务");
+  }
   saveData();
   playDing();
   toast("打卡成功","success");
@@ -1381,7 +1471,7 @@ function renderStudentManagement(){
     ${list.length?list.map(s=>`<tr><td><b>${escapeHtml(s.username)}</b></td><td>${escapeHtml(s.name)}</td><td>${formatDateTime(s.createdAt)}</td>
       <td>${s.mustChangePassword?'<span class="badge badge-warning">首次登录需改密</span>':'<span class="badge badge-success">正常</span>'}</td>
       <td><span class="small muted">成就点:${s.achievementPoint||0} 达成:${s.totalCheckinComplete||0} 宠物:${s.pet&&s.pet.petId?petName(s.pet.petId):"未领养"}</span></td>
-      <td><div class="toolbar-left"><button class="secondary" onclick="resetStudentPassword('${escapeHtml(s.username)}')">重置密码</button><button class="danger" onclick="initStudent('${escapeHtml(s.username)}')">初始化</button></div></td></tr>`).join("")
+      <td><div class="toolbar-left"><button class="secondary" onclick="resetStudentPassword('${escapeHtml(s.username)}')">重置密码</button><button class="secondary" onclick="openBackpackAdmin('${escapeHtml(s.username)}')">背包管理</button><button class="danger" onclick="initStudent('${escapeHtml(s.username)}')">初始化</button></div></td></tr>`).join("")
     :`<tr><td colspan="6"><div class="empty">暂无学生账号</div></td></tr>`}
     </tbody></table></div>`;
 }
@@ -1431,6 +1521,8 @@ function initStudent(username){
       s.deadPetIds=[];
       s.achievementPoint=0;
       s.totalCheckinComplete=0;
+      s.pointLogs=[];
+      s.itemLogs=[];
       if(state.data.attendance&&state.data.attendance[username]){
         delete state.data.attendance[username];
       }
@@ -1441,6 +1533,43 @@ function initStudent(username){
       toast(s.name+" 已初始化","success");
       render();
     });
+}
+
+function openBackpackAdmin(username){
+  const s=state.data.accounts[username];
+  if(!s||s.role!=="student")return;
+  const items=[
+    {itemId:"food",name:"宠物粮"},
+    {itemId:"cleaner",name:"清洁剂"},
+    {itemId:"medicine",name:"药剂"}
+  ];
+  const currentHtml=items.map(it=>{
+    const bp=s.backpack.find(x=>x.itemId===it.itemId);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div><b>${it.name}</b> <span class="muted">当前：${bp?bp.count:0}</span></div>
+      <div class="toolbar-left">
+        <button class="primary" style="padding:4px 12px" onclick="adminAdjustBackpack('${escapeHtml(username)}','${it.itemId}',1)">+1</button>
+        <button class="danger" style="padding:4px 12px" onclick="adminAdjustBackpack('${escapeHtml(username)}','${it.itemId}',-1)">-1</button>
+      </div>
+    </div>`;
+  }).join("");
+  showModal("背包管理 - "+s.name,
+    `<div class="small muted" style="margin-bottom:8px">手动增加或扣除该学生的背包物品</div>${currentHtml}`,
+    `<button class="primary" onclick="closeModal()">关闭</button>`);
+}
+function adminAdjustBackpack(username,itemId,amount){
+  const s=state.data.accounts[username];
+  if(!s||s.role!=="student")return;
+  const item=s.backpack.find(x=>x.itemId===itemId);
+  if(!item)return;
+  if(amount<0&&item.count+amount<0){toast(item.name+"数量不足","error");return}
+  item.count+=amount;
+  const itemName=item.name;
+  addItemLog(username,itemId,itemName,amount,amount>0?"管理员手动增加":"管理员手动扣除");
+  saveData();
+  toast(itemName+(amount>0?"增加":"扣除")+"成功","success");
+  playDing();
+  openBackpackAdmin(username);
 }
 
 function renderAllRecords(){
