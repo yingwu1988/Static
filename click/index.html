@@ -235,7 +235,7 @@ function defaultPetConfig(){
   };
 }
 function defaultBackpack(){return[{itemId:"medicine",name:"药剂",count:0},{itemId:"food",name:"宠物粮",count:0},{itemId:"cleaner",name:"清洁剂",count:0}]}
-function defaultPet(){return{petId:"",petName:"",birthTimestamp:0,lastUpdate:0,healthStatus:"healthy",full:80,clean:80,intimacy:30,intimacyZeroTs:0,missDeductIds:[]}}
+function defaultPet(){return{petId:"",petName:"",birthTimestamp:0,lastUpdate:0,healthStatus:"healthy",full:80,clean:80,intimacy:30,intimacyZeroTs:0,missDeductIds:[],missPenaltyIds:[]}}
 function addPointLog(type,amount,desc){
   const u=state.session.username;
   const s=getStudentPet(u);
@@ -256,28 +256,58 @@ function applyMissTaskDeduction(username){
   if(!s||!s.pet||!s.pet.petId||s.pet.healthStatus==="dead")return 0;
   const today=dateKey();
   const tasks=getTodayTasks();
-  if(!tasks.length)return 0;
   if(!Array.isArray(s.pet.missDeductIds))s.pet.missDeductIds=[];
+  if(!Array.isArray(s.pet.missPenaltyIds))s.pet.missPenaltyIds=[];
   const deducted=new Set(s.pet.missDeductIds);
+  const penalized=new Set(s.pet.missPenaltyIds);
   const nowTs=new Date();
-  let missCount=0;
-  for(const t of tasks){
-    if(deducted.has(t.instanceId))continue;
-    if(!isTaskCompleted(username,today,t.instanceId)&&deadlinePassed(t,nowTs)){
-      missCount++;
-      s.pet.missDeductIds.push(t.instanceId);
+  const cfg=getPetConfig();
+  let totalMiss=0;
+
+  // 1. Today's overdue uncompleted tasks: normal 1x deduction (no item log)
+  if(tasks.length){
+    let missCount=0;
+    for(const t of tasks){
+      if(deducted.has(t.instanceId))continue;
+      if(!isTaskCompleted(username,today,t.instanceId)&&deadlinePassed(t,nowTs)){
+        missCount++;
+        s.pet.missDeductIds.push(t.instanceId);
+      }
+    }
+    if(missCount>0){
+      const fullDeduct=missCount*cfg.missFullDeduct;
+      const cleanDeduct=missCount*cfg.missCleanDeduct;
+      s.pet.full=Math.max(0,s.pet.full-fullDeduct);
+      s.pet.clean=Math.max(0,s.pet.clean-cleanDeduct);
+      totalMiss+=missCount;
     }
   }
-  if(missCount<=0)return 0;
-  const cfg=getPetConfig();
-  const fullDeduct=missCount*cfg.missFullDeduct;
-  const cleanDeduct=missCount*cfg.missCleanDeduct;
-  s.pet.full=Math.max(0,s.pet.full-fullDeduct);
-  s.pet.clean=Math.max(0,s.pet.clean-cleanDeduct);
-  s.pet.lastUpdate=Date.now();
-  addItemLog(username,"food","宠物粮",-fullDeduct,"未完成任务扣除("+missCount+"个)");
-  addItemLog(username,"cleaner","清洁剂",-cleanDeduct,"未完成任务扣除("+missCount+"个)");
-  return missCount;
+
+  // 2. Previous day's uncompleted tasks (already deducted but not made up): 2x penalty
+  const yesterday=new Date();
+  yesterday.setDate(yesterday.getDate()-1);
+  const yKey=dateKey(yesterday);
+  const yTasks=state.data.dailyTasks[yKey]||[];
+  if(yTasks.length){
+    let penaltyCount=0;
+    for(const t of yTasks){
+      if(penalized.has(t.instanceId))continue;
+      if(deducted.has(t.instanceId)&&!isTaskCompleted(username,yKey,t.instanceId)){
+        penaltyCount++;
+        s.pet.missPenaltyIds.push(t.instanceId);
+      }
+    }
+    if(penaltyCount>0){
+      const fullPenalty=penaltyCount*cfg.missFullDeduct*2;
+      const cleanPenalty=penaltyCount*cfg.missCleanDeduct*2;
+      s.pet.full=Math.max(0,s.pet.full-fullPenalty);
+      s.pet.clean=Math.max(0,s.pet.clean-cleanPenalty);
+      totalMiss+=penaltyCount;
+    }
+  }
+
+  if(totalMiss>0)s.pet.lastUpdate=Date.now();
+  return totalMiss;
 }
 
 let autoConsumeFoodCount=0;
@@ -712,7 +742,7 @@ function adoptPet(zodiacId){
 
   const nowTs=Date.now();
   s.pet={petId:zodiacId,petName:petName(zodiacId),birthTimestamp:nowTs,lastUpdate:nowTs,
-    healthStatus:"healthy",full:80,clean:80,intimacy:30,intimacyZeroTs:0};
+    healthStatus:"healthy",full:80,clean:80,intimacy:30,intimacyZeroTs:0,missDeductIds:[],missPenaltyIds:[]};
   if(!s.adoptedPetIds.includes(zodiacId))s.adoptedPetIds.push(zodiacId);
   saveData();
   petDialogCache=getPetRandomDialog(s.pet);
@@ -1400,15 +1430,20 @@ function renderStudentTaskCard(t,username){
   const done=isTaskCompleted(username,dateKey(),t.instanceId);
   const a=getAttendance(username,dateKey())[t.instanceId];
   const status=taskCanCheckin(t);
-  let button="";
-  if(done)button=`<button class="checkin-btn done" disabled>✓ 已完成</button>`;
-  else if(status.reason==="not-open")button=`<button class="checkin-btn locked" disabled>05:00后开放</button>`;
-  else if(status.reason==="expired")button=`<button class="checkin-btn locked" disabled>已过截止时间</button>`;
-  else button=`<button class="checkin-btn primary" onclick="checkin('${t.instanceId}')">立即打卡</button>`;
+  let buttons="";
+  if(done){
+    buttons=`<button class="checkin-btn done" disabled>✓ 已完成</button>`;
+  }else if(status.reason==="not-open"){
+    buttons=`<button class="checkin-btn locked" disabled>05:00后开放</button><button class="checkin-btn locked" disabled>补打卡</button>`;
+  }else if(status.reason==="expired"){
+    buttons=`<button class="checkin-btn locked" disabled>已过截止时间</button><button class="checkin-btn warning" onclick="makeupCheckin('${t.instanceId}')">补打卡</button>`;
+  }else{
+    buttons=`<button class="checkin-btn primary" onclick="checkin('${t.instanceId}')">立即打卡</button><button class="checkin-btn locked" disabled>补打卡</button>`;
+  }
   return `<div class="task-card">
     <div class="task-head"><div><div class="task-name">${escapeHtml(t.name)}</div><div class="task-desc">${escapeHtml(t.description||"")}</div></div>
     <span class="badge ${deadlinePassed(t)?"badge-danger":"badge-warning"}">截止 ${escapeHtml(t.deadline)}</span></div>
-    <div class="task-foot"><div class="small muted">${done?"打卡时间："+formatDateTime(a.checkinTime):"请在截止时间前完成打卡"}</div>${button}</div>
+    <div class="task-foot"><div class="small muted">${done?"打卡时间："+formatDateTime(a.checkinTime):"请在截止时间前完成打卡"}</div><div style="display:flex;gap:8px;flex-wrap:wrap">${buttons}</div></div>
   </div>`;
 }
 function checkin(instanceId){
@@ -1432,6 +1467,25 @@ function checkin(instanceId){
   saveData();
   playDing();
   toast("打卡成功","success");
+  render();
+}
+function makeupCheckin(instanceId){
+  if(!requireStudent())return;
+  ensureDailyTaskData();
+  const tasks=getTodayTasks(),task=tasks.find(t=>t.instanceId===instanceId);
+  if(!task){toast("任务不存在","error");return}
+  if(isTaskCompleted(state.session.username,dateKey(),instanceId)){toast("请勿重复打卡","warning");return}
+  if(!deadlinePassed(task)){toast("尚未过截止时间，请正常打卡","warning");return}
+  const now=new Date();
+  setAttendance(state.session.username,dateKey(),instanceId,{completed:true,checkinTime:now.toISOString(),makeup:true});
+  const acc=state.data.accounts[state.session.username];
+  if(acc&&acc.role==="student"){
+    acc.totalCheckinComplete=(acc.totalCheckinComplete||0)+1;
+    addPointLog("makeup", 1, "补打卡完成");
+  }
+  saveData();
+  playDing();
+  toast("补打卡成功","success");
   render();
 }
 
