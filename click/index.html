@@ -495,8 +495,8 @@ function closeModal(){
   render();
 }
 function confirmModal(title,message,onConfirm){
-  showModal(title,`<div class="danger-box">${escapeHtml(message)}</div>`,
-    `<button class="secondary" onclick="closeModal()">取消</button><button class="danger" id="confirmActionBtn">确定</button>`);
+  showModal(title,`<div class="warning-box">${escapeHtml(message)}</div>`,
+    `<button class="secondary" onclick="closeModal()">取消</button><button class="primary" id="confirmActionBtn">确定</button>`);
   setTimeout(()=>{
     const b=document.getElementById("confirmActionBtn");
     if(b)b.onclick=()=>{closeModal();onConfirm()};
@@ -1436,15 +1436,21 @@ function renderStudentTaskCard(t,username){
   }else if(status.reason==="not-open"){
     buttons=`<button class="checkin-btn locked" disabled>05:00后开放</button><button class="checkin-btn locked" disabled>补打卡</button>`;
   }else if(status.reason==="expired"){
-    buttons=`<button class="checkin-btn locked" disabled>已过截止时间</button><button class="checkin-btn warning" onclick="makeupCheckin('${t.instanceId}')">补打卡</button>`;
+    buttons=`<button class="checkin-btn locked" disabled>已过截止时间</button><button class="checkin-btn warning" onclick="confirmMakeupCheckin('${t.instanceId}','${escapeHtml(t.name)}')">补打卡</button>`;
   }else{
-    buttons=`<button class="checkin-btn primary" onclick="checkin('${t.instanceId}')">立即打卡</button><button class="checkin-btn locked" disabled>补打卡</button>`;
+    buttons=`<button class="checkin-btn primary" onclick="confirmCheckin('${t.instanceId}','${escapeHtml(t.name)}')">立即打卡</button><button class="checkin-btn locked" disabled>补打卡</button>`;
   }
   return `<div class="task-card">
     <div class="task-head"><div><div class="task-name">${escapeHtml(t.name)}</div><div class="task-desc">${escapeHtml(t.description||"")}</div></div>
     <span class="badge ${deadlinePassed(t)?"badge-danger":"badge-warning"}">截止 ${escapeHtml(t.deadline)}</span></div>
     <div class="task-foot"><div class="small muted">${done?"打卡时间："+formatDateTime(a.checkinTime):"请在截止时间前完成打卡"}</div><div style="display:flex;gap:8px;flex-wrap:wrap">${buttons}</div></div>
   </div>`;
+}
+function confirmCheckin(instanceId,taskName){
+  confirmModal("确认打卡",`确定要完成「${taskName}」的打卡吗？`,()=>checkin(instanceId));
+}
+function confirmMakeupCheckin(instanceId,taskName){
+  confirmModal("确认补打卡",`确定要补打卡「${taskName}」吗？`,()=>makeupCheckin(instanceId));
 }
 function checkin(instanceId){
   if(!requireStudent())return;
