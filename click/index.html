@@ -231,7 +231,8 @@ function defaultPetConfig(){
     itemFoodAdd:35,itemCleanerAdd:35,
     priceMedicine:10,priceFood:3,priceCleaner:2,
     autoCareEnable:true,autoCareFullMin:45,autoCareCleanMin:45,
-    missFullDeduct:1,missCleanDeduct:1
+    overdueFullDeduct:1,overdueCleanDeduct:1,
+    missedFullDeduct:2,missedCleanDeduct:2
   };
 }
 function defaultBackpack(){return[{itemId:"medicine",name:"药剂",count:0},{itemId:"food",name:"宠物粮",count:0},{itemId:"cleaner",name:"清洁剂",count:0}]}
@@ -264,7 +265,7 @@ function applyMissTaskDeduction(username){
   const cfg=getPetConfig();
   let totalMiss=0;
 
-  // 1. Today's overdue uncompleted tasks: normal 1x deduction (no item log)
+  // 1. Today's overdue uncompleted tasks: overdue deduction (no item log)
   if(tasks.length){
     let missCount=0;
     for(const t of tasks){
@@ -275,15 +276,15 @@ function applyMissTaskDeduction(username){
       }
     }
     if(missCount>0){
-      const fullDeduct=missCount*cfg.missFullDeduct;
-      const cleanDeduct=missCount*cfg.missCleanDeduct;
+      const fullDeduct=missCount*cfg.overdueFullDeduct;
+      const cleanDeduct=missCount*cfg.overdueCleanDeduct;
       s.pet.full=Math.max(0,s.pet.full-fullDeduct);
       s.pet.clean=Math.max(0,s.pet.clean-cleanDeduct);
       totalMiss+=missCount;
     }
   }
 
-  // 2. Previous day's uncompleted tasks (already deducted but not made up): 2x penalty
+  // 2. Previous day's uncompleted tasks (already deducted but not made up): missed penalty
   const yesterday=new Date();
   yesterday.setDate(yesterday.getDate()-1);
   const yKey=dateKey(yesterday);
@@ -298,8 +299,8 @@ function applyMissTaskDeduction(username){
       }
     }
     if(penaltyCount>0){
-      const fullPenalty=penaltyCount*cfg.missFullDeduct*2;
-      const cleanPenalty=penaltyCount*cfg.missCleanDeduct*2;
+      const fullPenalty=penaltyCount*cfg.missedFullDeduct;
+      const cleanPenalty=penaltyCount*cfg.missedCleanDeduct;
       s.pet.full=Math.max(0,s.pet.full-fullPenalty);
       s.pet.clean=Math.max(0,s.pet.clean-cleanPenalty);
       totalMiss+=penaltyCount;
@@ -340,6 +341,16 @@ function formatDateTime(value){
   const d=new Date(value);
   if(Number.isNaN(d.getTime()))return value;
   return dateKey(d)+" "+timeKey(d);
+}
+function formatDuration(seconds){
+  if(!seconds||seconds<0)return "-";
+  if(seconds<60)return Math.floor(seconds)+"秒";
+  const m=Math.floor(seconds/60);
+  const s=seconds%60;
+  if(m<60)return m+"分"+(s>0?s+"秒":"");
+  const h=Math.floor(m/60);
+  const mm=m%60;
+  return h+"时"+(mm>0?mm+"分":"");
 }
 function escapeHtml(s){
   return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
@@ -616,12 +627,14 @@ function allTasksCompleted(username,date){
   return tasks.every(t=>{
     const a=getAttendance(username,date)[t.instanceId];
     if(!a?.completed)return false;
-    // 没有打卡时间但标记为已完成，视为按时完成（兼容旧数据/异常数据）
+    if(a.startTime){
+      const dt=new Date(a.startTime);
+      if(!Number.isNaN(dt.getTime()))return !deadlinePassed(t,dt);
+    }
     if(!a.checkinTime)return true;
-    const dt=new Date(a.checkinTime);
-    if(Number.isNaN(dt.getTime()))return true;
-    // 与 deadlinePassed 判断逻辑一致：打卡时间未超过截止时间即为按时
-    return !deadlinePassed(t,dt);
+    const dt2=new Date(a.checkinTime);
+    if(Number.isNaN(dt2.getTime()))return true;
+    return !deadlinePassed(t,dt2);
   });
 }
 
@@ -943,7 +956,8 @@ function openPetConfig(){
     ["itemFoodAdd","宠物粮恢复吃饱点数"],["itemCleanerAdd","清洁剂恢复卫生点数"],
     ["priceMedicine","药剂售价(达成数量)"],["priceFood","宠物粮售价(达成数量)"],["priceCleaner","清洁剂售价(达成数量)"],
     ["autoCareFullMin","自动照料-吃饱最低阈值"],["autoCareCleanMin","自动照料-卫生最低阈值"],
-    ["missFullDeduct","未完成任务-每个扣吃饱点数"],["missCleanDeduct","未完成任务-每个扣清洁点数"]
+    ["overdueFullDeduct","超截止时间未完成-每个扣吃饱点数"],["overdueCleanDeduct","超截止时间未完成-每个扣清洁点数"],
+    ["missedFullDeduct","当日无法完成-每个扣吃饱点数"],["missedCleanDeduct","当日无法完成-每个扣清洁点数"]
   ];
   showModal("宠物参数配置",
     `<div class="pet-config-grid">${fields.map(([key,label])=>`
@@ -1431,67 +1445,74 @@ function renderStudentTaskCard(t,username){
   const a=getAttendance(username,dateKey())[t.instanceId];
   const status=taskCanCheckin(t);
   let buttons="";
+  let infoText="";
   if(done){
     buttons=`<button class="checkin-btn done" disabled>✓ 已完成</button>`;
+    if(a&&a.startTime&&a.checkinTime){
+      const dur=Math.round((new Date(a.checkinTime)-new Date(a.startTime))/1000);
+      infoText=`开始：${formatDateTime(a.startTime)}<br>完成：${formatDateTime(a.checkinTime)}<br>耗时：${formatDuration(dur)}`;
+    }else{
+      infoText=`打卡时间：${formatDateTime(a?.checkinTime)}`;
+    }
+  }else if(a&&a.startTime){
+    const elapsed=Math.round((Date.now()-new Date(a.startTime))/1000);
+    buttons=`<button class="checkin-btn primary" onclick="confirmCompleteCheckin('${t.instanceId}','${escapeHtml(t.name)}')">完成打卡</button>`;
+    infoText=`开始时间：${formatDateTime(a.startTime)}　已耗时：${formatDuration(elapsed)}`;
   }else if(status.reason==="not-open"){
-    buttons=`<button class="checkin-btn locked" disabled>05:00后开放</button><button class="checkin-btn locked" disabled>补打卡</button>`;
+    buttons=`<button class="checkin-btn locked" disabled>05:00后开放</button>`;
+    infoText="请在截止时间前完成打卡";
   }else if(status.reason==="expired"){
-    buttons=`<button class="checkin-btn locked" disabled>已过截止时间</button><button class="checkin-btn warning" onclick="confirmMakeupCheckin('${t.instanceId}','${escapeHtml(t.name)}')">补打卡</button>`;
+    buttons=`<button class="checkin-btn warning" onclick="confirmStartMakeup('${t.instanceId}','${escapeHtml(t.name)}')">补打卡</button>`;
+    infoText="已过截止时间，点击补打卡开始任务";
   }else{
-    buttons=`<button class="checkin-btn primary" onclick="confirmCheckin('${t.instanceId}','${escapeHtml(t.name)}')">立即打卡</button><button class="checkin-btn locked" disabled>补打卡</button>`;
+    buttons=`<button class="checkin-btn primary" onclick="confirmStartCheckin('${t.instanceId}','${escapeHtml(t.name)}')">立即打卡</button>`;
+    infoText="请在截止时间前完成打卡";
   }
   return `<div class="task-card">
     <div class="task-head"><div><div class="task-name">${escapeHtml(t.name)}</div><div class="task-desc">${escapeHtml(t.description||"")}</div></div>
     <span class="badge ${deadlinePassed(t)?"badge-danger":"badge-warning"}">截止 ${escapeHtml(t.deadline)}</span></div>
-    <div class="task-foot"><div class="small muted">${done?"打卡时间："+formatDateTime(a.checkinTime):"请在截止时间前完成打卡"}</div><div style="display:flex;gap:8px;flex-wrap:wrap">${buttons}</div></div>
+    <div class="task-foot"><div class="small muted">${infoText}</div><div style="display:flex;gap:8px;flex-wrap:wrap">${buttons}</div></div>
   </div>`;
 }
-function confirmCheckin(instanceId,taskName){
-  confirmModal("确认打卡",`确定要完成「${taskName}」的打卡吗？`,()=>checkin(instanceId));
+function confirmStartCheckin(instanceId,taskName){
+  confirmModal("确认开始打卡",`确定要开始「${taskName}」的打卡吗？`,()=>startCheckin(instanceId,false));
 }
-function confirmMakeupCheckin(instanceId,taskName){
-  confirmModal("确认补打卡",`确定要补打卡「${taskName}」吗？`,()=>makeupCheckin(instanceId));
+function confirmCompleteCheckin(instanceId,taskName){
+  confirmModal("确认完成打卡",`确定要完成「${taskName}」的打卡吗？`,()=>completeCheckin(instanceId));
 }
-function checkin(instanceId){
+function confirmStartMakeup(instanceId,taskName){
+  confirmModal("确认补打卡",`确定要开始补打卡「${taskName}」吗？`,()=>startCheckin(instanceId,true));
+}
+function startCheckin(instanceId,isMakeup){
   if(!requireStudent())return;
   ensureDailyTaskData();
   const tasks=getTodayTasks(),task=tasks.find(t=>t.instanceId===instanceId);
   if(!task){toast("任务不存在","error");return}
   if(isTaskCompleted(state.session.username,dateKey(),instanceId)){toast("请勿重复打卡","warning");return}
-  const c=taskCanCheckin(task);
-  if(!c.ok){
-    toast(c.reason==="expired"?"已过打卡截止时间，无法打卡":"今日打卡任务尚未开放，05:00后更新","warning");
-    render();return;
-  }
   const now=new Date();
-  setAttendance(state.session.username,dateKey(),instanceId,{completed:true,checkinTime:now.toISOString()});
+  setAttendance(state.session.username,dateKey(),instanceId,{startTime:now.toISOString(),completed:false,makeup:!!isMakeup});
+  saveData();
+  toast(isMakeup?"补打卡已开始，请点击完成打卡":"打卡已开始，请点击完成打卡","success");
+  render();
+}
+function completeCheckin(instanceId){
+  if(!requireStudent())return;
+  ensureDailyTaskData();
+  const tasks=getTodayTasks(),task=tasks.find(t=>t.instanceId===instanceId);
+  if(!task){toast("任务不存在","error");return}
+  if(isTaskCompleted(state.session.username,dateKey(),instanceId)){toast("请勿重复打卡","warning");return}
+  const a=getAttendance(state.session.username,dateKey())[instanceId];
+  if(!a||!a.startTime){toast("请先点击开始打卡","error");return}
+  const now=new Date();
+  setAttendance(state.session.username,dateKey(),instanceId,{completed:true,checkinTime:now.toISOString(),startTime:a.startTime,makeup:a.makeup||false});
   const acc=state.data.accounts[state.session.username];
   if(acc&&acc.role==="student"){
     acc.totalCheckinComplete=(acc.totalCheckinComplete||0)+1;
-    addPointLog("checkin", 1, "完成打卡任务");
+    addPointLog("checkin", 1, a.makeup?"补打卡完成":"完成打卡任务");
   }
   saveData();
   playDing();
   toast("打卡成功","success");
-  render();
-}
-function makeupCheckin(instanceId){
-  if(!requireStudent())return;
-  ensureDailyTaskData();
-  const tasks=getTodayTasks(),task=tasks.find(t=>t.instanceId===instanceId);
-  if(!task){toast("任务不存在","error");return}
-  if(isTaskCompleted(state.session.username,dateKey(),instanceId)){toast("请勿重复打卡","warning");return}
-  if(!deadlinePassed(task)){toast("尚未过截止时间，请正常打卡","warning");return}
-  const now=new Date();
-  setAttendance(state.session.username,dateKey(),instanceId,{completed:true,checkinTime:now.toISOString(),makeup:true});
-  const acc=state.data.accounts[state.session.username];
-  if(acc&&acc.role==="student"){
-    acc.totalCheckinComplete=(acc.totalCheckinComplete||0)+1;
-    addPointLog("makeup", 1, "补打卡完成");
-  }
-  saveData();
-  playDing();
-  toast("补打卡成功","success");
   render();
 }
 
@@ -1707,11 +1728,11 @@ function renderAllRecordTable(students){
       }
     }
   }
-  return `<div class="table-wrap"><table><thead><tr><th>日期</th><th>学生</th><th>任务</th><th>截止时间</th><th>状态</th><th>打卡时间</th></tr></thead><tbody>
+  return `<div class="table-wrap"><table><thead><tr><th>日期</th><th>学生</th><th>任务</th><th>截止时间</th><th>状态</th><th>开始时间</th><th>完成时间</th><th>耗时</th></tr></thead><tbody>
     ${rows.length?rows.map(r=>r.t?`<tr><td>${r.d}</td><td>${escapeHtml(r.s.name)}<br><span class="small muted">${escapeHtml(r.s.username)}</span></td><td>${escapeHtml(r.t.name)}</td><td>${escapeHtml(r.t.deadline)}</td>
-      <td>${r.a?.completed?'<span class="badge badge-success">已完成</span>':'<span class="badge badge-danger">未完成</span>'}</td><td>${r.a?.checkinTime?formatDateTime(r.a.checkinTime):"-"}</td></tr>`
-      :`<tr><td>${r.d}</td><td>${escapeHtml(r.s.name)}</td><td colspan="4">当天暂无任务</td></tr>`).join("")
-    :`<tr><td colspan="6"><div class="empty">没有符合筛选条件的记录</div></td></tr>`}
+      <td>${r.a?.completed?'<span class="badge badge-success">已完成</span>':r.a?.startTime?'<span class="badge badge-warning">已开始</span>':'<span class="badge badge-danger">未完成</span>'}</td><td>${r.a?.startTime?formatDateTime(r.a.startTime):"-"}</td><td>${r.a?.checkinTime?formatDateTime(r.a.checkinTime):"-"}</td><td>${r.a?.startTime&&r.a?.checkinTime?formatDuration(Math.round((new Date(r.a.checkinTime)-new Date(r.a.startTime))/1000)):"-"}</td></tr>`
+      :`<tr><td>${r.d}</td><td>${escapeHtml(r.s.name)}</td><td colspan="6">当天暂无任务</td></tr>`).join("")
+    :`<tr><td colspan="8"><div class="empty">没有符合筛选条件的记录</div></td></tr>`}
   </tbody></table></div>`;
 }
 function clearRecordFilters(){
@@ -1731,9 +1752,25 @@ function renderStudentRecordDate(username,d){
   const done=tasks.filter(t=>isTaskCompleted(username,d,t.instanceId)).length;
   return `<div class="card"><div class="toolbar" style="margin-bottom:10px"><div><h3>${d}</h3><div class="small muted">${done}/${tasks.length} 已完成</div></div>
     ${allTasksCompleted(username,d)?'<span class="badge badge-success">全勤成就日</span>':''}</div>
-    <div>${tasks.map(t=>{const a=getAttendance(username,d)[t.instanceId];return `<div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div>${tasks.map(t=>{const a=getAttendance(username,d)[t.instanceId];
+      let statusHtml="";
+      if(a?.completed){
+        let durText="-";
+        if(a.startTime&&a.checkinTime){
+          const dur=Math.round((new Date(a.checkinTime)-new Date(a.startTime))/1000);
+          durText=formatDuration(dur);
+        }
+        statusHtml=`<span class="badge badge-success">✓ 已完成</span>`;
+        if(a.makeup)statusHtml+=` <span class="badge badge-warning">补打卡</span>`;
+        statusHtml+=`<div class="small muted" style="margin-top:4px">开始：${formatDateTime(a.startTime)}<br>完成：${formatDateTime(a.checkinTime)}<br>耗时：${durText}</div>`;
+      }else if(a&&a.startTime){
+        statusHtml=`<span class="badge badge-warning">已开始未完成</span><div class="small muted" style="margin-top:4px">开始：${formatDateTime(a.startTime)}</div>`;
+      }else{
+        statusHtml='<span class="badge badge-danger">未完成</span>';
+      }
+      return `<div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div><b>${escapeHtml(t.name)}</b><div class="small muted">截止 ${escapeHtml(t.deadline)}</div></div>
-      <div>${a?.completed?`<span class="badge badge-success">✓ 已完成 ${formatDateTime(a.checkinTime)}</span>`:'<span class="badge badge-danger">未完成</span>'}</div>
+      <div style="text-align:right">${statusHtml}</div>
     </div>`}).join("")}</div>
   </div>`;
 }
